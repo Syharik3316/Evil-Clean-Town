@@ -1,0 +1,12 @@
+{
+  "name": "chistybereg-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Простой статический фронтенд «Чистый берег» (HTML/CSS/JS) поверх FastAPI API.",
+  "scripts": {
+    "dev": "serve -l 5173 ."
+  },
+  "devDependencies": {
+    "serve": "^14.2.3"
+  }
+}

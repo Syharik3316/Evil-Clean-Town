@@ -1,0 +1,15 @@
+{
+  "name": "Чистый берег",
+  "short_name": "Чистый берег",
+  "description": "Платформа популяризации экологического мониторинга ДЗЗ",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f8f7",
+  "theme_color": "#0f8b6c",
+  "lang": "ru",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

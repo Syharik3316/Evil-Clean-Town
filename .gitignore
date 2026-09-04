@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+uploads/*
+!uploads/.gitkeep
+node_modules/
+.pytest_cache/
+backend/app/static/satellite/*.png

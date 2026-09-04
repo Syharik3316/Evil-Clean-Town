@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Карта — Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+  <div class="container">
+    <h1>Карта побережья</h1>
+    <p class="lead">Спутниковые снимки конкретных участков берега. Демо-датасет — снимки сгенерированы для наглядности слайдера «до/после».</p>
+
+    <div class="card">
+      <div class="field">
+        <label for="site-select">Участок берега</label>
+        <select id="site-select"></select>
+      </div>
+      <div id="map"></div>
+      <div class="slider-wrap">
+        <label id="slider-label" class="muted">Загрузка слоёв…</label>
+        <input type="range" id="layer-slider" min="0" max="1" value="0" step="1" />
+      </div>
+      <p id="site-description" class="muted"></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/map.js"></script>
+  <script>
+    renderNav("map.html");
+    initMap();
+  </script>
+</body>
+</html>
