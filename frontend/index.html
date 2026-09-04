@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f8b6c" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+
+  <div class="container">
+    <div class="hero">
+      <h1>Твой берег глазами спутника</h1>
+      <p>Смотри «до/после» уборок на спутниковых снимках, проходи короткие уроки об экомониторинге,
+         участвуй в реальных уборках побережья и сообщай о найденном мусоре.</p>
+      <a class="btn" href="map.html" style="background:#fff;color:var(--primary-dark)">Смотреть карту</a>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin-top:0">🛰️ Карта ДЗЗ</h2>
+        <p class="muted">Слайдер «до/после» на реальных участках побережья по спутниковым данным.</p>
+        <a href="map.html">Открыть карту →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📘 Уроки</h2>
+        <p class="muted">5 минут — и ты понимаешь, как читать спутниковый снимок и зачем нужен мониторинг.</p>
+        <a href="lessons.html">Начать учиться →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">🧹 Мероприятия</h2>
+        <p class="muted">Уборки, вебинары и квесты рядом с тобой — с гео-чекином и баллами за участие.</p>
+        <a href="events.html">Посмотреть календарь →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📸 Репорты о мусоре</h2>
+        <p class="muted">Нашёл замусоренный участок — сфотографируй и отправь, это тоже citizen science.</p>
+        <a href="reports.html">Отправить репорт →</a>
+      </div>
+    </div>
+
+    <h2>Лидерборд</h2>
+    <div id="leaderboard-preview" class="card">Загрузка…</div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script>
+    renderNav("index.html");
+
+    (async () => {
+      const el = document.getElementById("leaderboard-preview");
+      try {
+        const top = await api.get("/leaderboard?scope=users&limit=5");
+        if (!top.length) {
+          el.innerHTML = '<p class="muted">Пока никто не набрал баллов — стань первым!</p>';
+          return;
+        }
+        el.innerHTML = `<table><tbody>${top
+          .map(
+            (u, i) =>
+              `<tr><td>#${i + 1}</td><td>${escapeHtml(u.name)}</td><td>${Math.round(u.points_total)} б.</td></tr>`
+          )
+          .join("")}</tbody></table>`;
+      } catch (e) {
+        el.innerHTML = '<p class="muted">Не удалось загрузить лидерборд.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
