@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Админ-панель — Чистый берег</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
@@ -13,12 +13,15 @@
     <div id="admin-root">Загрузка…</div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/nav.js"></script>
-  <script src="js/admin.js"></script>
+  <div id="app-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/admin.js"></script>
   <script>
-    renderNav("admin.html");
+    renderNav("/admin");
+    renderFooter();
     initAdminPage();
   </script>
 </body>

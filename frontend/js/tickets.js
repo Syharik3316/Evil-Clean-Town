@@ -168,7 +168,7 @@ async function loadCoursesTable() {
 
 function courseTicketRow(c) {
   return `<tr id="course-ticket-${c.id}">
-    <td><a href="lessons.html?id=${c.id}" target="_blank">${escapeHtml(c.title)}</a></td>
+    <td><a href="/lessons?id=${c.id}" target="_blank">${escapeHtml(c.title)}</a></td>
     <td>${c.points_reward}</td>
     <td style="display:flex; gap:6px; flex-wrap:wrap">
       <button class="btn" data-approve>Принять</button>

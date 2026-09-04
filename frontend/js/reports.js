@@ -37,7 +37,7 @@ function renderSubmissionView(root, user) {
 
   if (!user) {
     document.getElementById("report-form-card").innerHTML =
-      '<p class="muted">Чтобы отправить репорт, сначала <a href="login.html">войдите</a>.</p>';
+      '<p class="muted">Чтобы отправить репорт, сначала <a href="/login">войдите</a>.</p>';
   } else {
     renderReportForm();
   }

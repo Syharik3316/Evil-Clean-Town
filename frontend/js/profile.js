@@ -59,17 +59,17 @@ function renderOrganizerProfile(user) {
       <div class="card">
         <h2 style="margin-top:0">🧹 Мои мероприятия</h2>
         <p class="muted">Создание мероприятий и заявки волонтёров.</p>
-        <a href="organizer.html">Перейти →</a>
+        <a href="/organizer">Перейти →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📘 Курсы</h2>
         <p class="muted">Создание и модерация обучающих курсов.</p>
-        <a href="lessons.html">Перейти →</a>
+        <a href="/lessons">Перейти →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📸 Репорты</h2>
         <p class="muted">Модерация репортов о мусоре от волонтёров.</p>
-        <a href="reports.html">Перейти →</a>
+        <a href="/reports">Перейти →</a>
       </div>
     </div>
 
@@ -100,17 +100,17 @@ function renderAdminProfile(user) {
       <div class="card">
         <h2 style="margin-top:0">🎫 Тикеты</h2>
         <p class="muted">Модерация предложенных мероприятий и курсов.</p>
-        <a href="tickets.html">Перейти →</a>
+        <a href="/tickets">Перейти →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📊 Статистика</h2>
         <p class="muted">Сводная статистика фонда.</p>
-        <a href="admin.html">Перейти →</a>
+        <a href="/admin">Перейти →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📸 Репорты</h2>
         <p class="muted">Модерация репортов о мусоре.</p>
-        <a href="reports.html">Перейти →</a>
+        <a href="/reports">Перейти →</a>
       </div>
     </div>
 
@@ -206,8 +206,8 @@ async function renderVolunteerProfile(user) {
           : '<span class="badge pending">Не подтверждён</span>'}
       </p>
       <p class="muted">Верификация возраста (от 14 лет) нужна для записи на мероприятия и полного доступа к платформе.</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="btn secondary" id="gosuslugi-btn" ${user.age_verified ? "disabled" : ""}>Подтвердить через Госуслуги</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+        <button class="gos-btn" id="gosuslugi-btn" ${user.age_verified ? "disabled" : ""}><img src="/icons/gos.png" alt="Войти через Госуслуги" /></button>
         <button class="btn secondary" id="manual-verify-btn" ${user.age_verified ? "disabled" : ""}>Ручная верификация</button>
       </div>
       <p id="verify-status" class="muted"></p>

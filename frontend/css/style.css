@@ -301,6 +301,50 @@ table th, table td { text-align: left; padding: 8px; border-bottom: 1px solid va
   padding: 0 3px;
   animation: pulse 1.6s ease-in-out infinite;
 }
+/* .nav-badge{display:flex} выше специфичнее браузерного [hidden]{display:none} —
+   без этого правила бейдж (и его пульс) виден и без непрочитанных уведомлений */
+.nav-badge[hidden] { display: none; animation: none; }
+
+/* Логотип в навбаре и футере (вместо текстового названия) */
+.brand-logo { height: 34px; width: auto; display: block; }
+.footer-logo { height: 40px; width: auto; display: block; }
+
+/* Кнопка входа через Госуслуги — картинка вместо текстовой кнопки */
+.gos-btn {
+  display: inline-block; padding: 0; border: none; background: none; cursor: pointer;
+  border-radius: 6px; overflow: hidden;
+  transition: transform var(--transition-fast) var(--ease-out), box-shadow var(--transition-fast) var(--ease-out);
+}
+.gos-btn img { display: block; height: 40px; width: auto; }
+.gos-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow-lift); }
+.gos-btn:active { transform: translateY(0) scale(0.99); }
+.gos-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Автоподсказки адреса (Яндекс Suggest) */
+.suggest-panel {
+  position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: var(--shadow-lift); z-index: 60; max-height: 220px; overflow-y: auto;
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity var(--transition-fast) var(--ease-out), transform var(--transition-fast) var(--ease-out);
+}
+.suggest-panel.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.suggest-item { padding: 8px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid var(--border); }
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:hover { background: #f4f8f7; }
+
+/* Футер */
+.site-footer {
+  background: var(--surface); border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+.footer-inner { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+.footer-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.site-footer p { margin: 4px 0; font-size: 0.85rem; color: var(--text-muted); }
+.site-footer a { color: var(--text-muted); text-decoration: underline; }
 
 /* Skeleton-заглушки для загрузки */
 .skeleton {

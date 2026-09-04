@@ -1,6 +1,69 @@
 let currentRejectHandler = null;
 let roleFieldCount = 0;
 
+const ROSTOV_CENTER = [47.2357, 39.7015];
+let eventMap = null;
+let eventPlacemark = null;
+let selectedCoords = null;
+
+function loadYandexMapsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.ymaps) {
+      window.ymaps.ready(() => resolve(window.ymaps));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${YANDEX_MAPS_JS_API_KEY}&lang=ru_RU`;
+    script.onload = () => window.ymaps.ready(() => resolve(window.ymaps));
+    script.onerror = () => reject(new Error("Не удалось загрузить Яндекс.Карты"));
+    document.head.appendChild(script);
+  });
+}
+
+function setEventMarker(ymaps, coords) {
+  selectedCoords = coords;
+  if (eventPlacemark) {
+    eventPlacemark.geometry.setCoordinates(coords);
+  } else {
+    eventPlacemark = new ymaps.Placemark(coords, {}, { draggable: true });
+    eventPlacemark.events.add("dragend", () => {
+      selectedCoords = eventPlacemark.geometry.getCoordinates();
+    });
+    eventMap.geoObjects.add(eventPlacemark);
+  }
+}
+
+async function initEventMap() {
+  const mapEl = document.getElementById("ce-map");
+  if (!mapEl) return;
+  eventMap = null;
+  eventPlacemark = null;
+  selectedCoords = null;
+
+  try {
+    const ymaps = await loadYandexMapsScript();
+    eventMap = new ymaps.Map("ce-map", { center: ROSTOV_CENTER, zoom: 11, controls: ["zoomControl"] });
+    eventMap.events.add("click", (e) => setEventMarker(ymaps, e.get("coords")));
+  } catch (e) {
+    mapEl.innerHTML = '<p class="muted" style="padding:12px">Не удалось загрузить карту.</p>';
+  }
+}
+
+async function geocodeAddress(text) {
+  if (!window.ymaps || !eventMap) return;
+  try {
+    const res = await window.ymaps.geocode(text, { results: 1 });
+    const firstGeoObject = res.geoObjects.get(0);
+    if (firstGeoObject) {
+      const coords = firstGeoObject.geometry.getCoordinates();
+      eventMap.setCenter(coords, 16);
+      setEventMarker(window.ymaps, coords);
+    }
+  } catch (e) {
+    /* карта необязательна — просто не переместится */
+  }
+}
+
 async function initOrganizerPage() {
   requireAuth();
   const user = await currentUser(true);
@@ -184,7 +247,11 @@ async function renderCreateEventForm() {
           </select>
         </div>
         <div class="field"><label for="ce-region">Регион</label><input type="text" id="ce-region" /></div>
-        <div class="field"><label for="ce-address">Адрес</label><input type="text" id="ce-address" /></div>
+        <div class="field"><label for="ce-address">Адрес</label><input type="text" id="ce-address" autocomplete="off" placeholder="Начните вводить адрес…" /></div>
+        <div class="field">
+          <label>Точное место на карте (кликните, чтобы поставить метку; можно перетащить)</label>
+          <div id="ce-map" style="height:320px;border-radius:8px;border:1px solid var(--border)"></div>
+        </div>
         <div class="field"><label for="ce-starts">Дата и время начала</label><input type="datetime-local" id="ce-starts" required /></div>
         <div class="field"><label for="ce-capacity">Лимит участников (опционально)</label><input type="number" id="ce-capacity" min="1" /></div>
         <div class="field"><label for="ce-points">Баллы за участие</label><input type="number" id="ce-points" value="20" min="0" /></div>
@@ -212,6 +279,9 @@ async function renderCreateEventForm() {
     document.getElementById("ce-roles").appendChild(wrap);
   });
 
+  initEventMap();
+  initAddressSuggest(document.getElementById("ce-address"), (text) => geocodeAddress(text));
+
   document.getElementById("create-event-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const alertEl = document.getElementById("create-event-alert");
@@ -229,8 +299,16 @@ async function renderCreateEventForm() {
     const siteSelect = document.getElementById("ce-site");
     const siteOption = siteSelect.selectedOptions[0];
     const site_id = siteSelect.value ? parseInt(siteSelect.value, 10) : null;
-    const lat = siteOption && siteOption.dataset.lat ? parseFloat(siteOption.dataset.lat) : 55.751244;
-    const lon = siteOption && siteOption.dataset.lon ? parseFloat(siteOption.dataset.lon) : 37.618423;
+    // Приоритет координат: метка на карте (точнее всего) → выбранный участок побережья → дефолт.
+    let lat = 55.751244;
+    let lon = 37.618423;
+    if (siteOption && siteOption.dataset.lat) {
+      lat = parseFloat(siteOption.dataset.lat);
+      lon = parseFloat(siteOption.dataset.lon);
+    }
+    if (selectedCoords) {
+      [lat, lon] = selectedCoords;
+    }
 
     const payload = {
       title: document.getElementById("ce-title").value.trim(),

@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Вход — Чистый берег</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
@@ -24,16 +24,18 @@
         </div>
         <button class="btn" type="submit" style="width:100%">Войти</button>
       </form>
-      <p class="muted" style="margin-top:14px">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
-      <p class="muted">Демо-доступы (логин / пароль): admin / admin12345, organizer / organizer12345, volunteer / volunteer12345</p>
+      <p class="muted" style="margin-top:14px">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
     </div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/nav.js"></script>
+  <div id="app-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/nav.js"></script>
   <script>
-    renderNav("login.html");
+    renderNav("/login");
+    renderFooter();
 
     document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -44,7 +46,7 @@
       try {
         const tokens = await api.post("/auth/login", { username, password });
         setTokens(tokens.access_token, tokens.refresh_token);
-        window.location.href = "profile.html";
+        window.location.href = "/profile";
       } catch (err) {
         alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
       }

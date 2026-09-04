@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Чистый берег</title>
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0f8b6c" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
@@ -16,7 +16,7 @@
       <h1>Твой берег глазами спутника</h1>
       <p>Смотри «до/после» уборок на спутниковых снимках, проходи короткие уроки об экомониторинге,
          участвуй в реальных уборках побережья и сообщай о найденном мусоре.</p>
-      <a class="btn" href="map.html" style="background:#fff;color:var(--primary-dark)">Смотреть карту</a>
+      <a class="btn" href="/map" style="background:#fff;color:var(--primary-dark)">Смотреть карту</a>
     </div>
 
     <div id="greeting-strip-root"></div>
@@ -25,22 +25,22 @@
       <div class="card">
         <h2 style="margin-top:0">🛰️ Карта ДЗЗ</h2>
         <p class="muted">Слайдер «до/после» на реальных участках побережья по спутниковым данным.</p>
-        <a href="map.html">Открыть карту →</a>
+        <a href="/map">Открыть карту →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📘 Уроки</h2>
         <p class="muted">5 минут — и ты понимаешь, как читать спутниковый снимок и зачем нужен мониторинг.</p>
-        <a href="lessons.html">Начать учиться →</a>
+        <a href="/lessons">Начать учиться →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">🧹 Мероприятия</h2>
         <p class="muted">Уборки, вебинары и квесты рядом с тобой — с гео-чекином и баллами за участие.</p>
-        <a href="events.html">Посмотреть календарь →</a>
+        <a href="/events">Посмотреть календарь →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📸 Репорты о мусоре</h2>
         <p class="muted">Нашёл замусоренный участок — сфотографируй и отправь, это тоже citizen science.</p>
-        <a href="reports.html">Отправить репорт →</a>
+        <a href="/reports">Отправить репорт →</a>
       </div>
     </div>
 
@@ -48,11 +48,14 @@
     <div id="leaderboard-preview" class="card">Загрузка…</div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/nav.js"></script>
+  <div id="app-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/nav.js"></script>
   <script>
-    renderNav("index.html");
+    renderNav("/index");
+    renderFooter();
     renderGreetingStrip();
 
     (async () => {
@@ -85,7 +88,7 @@
           root.innerHTML = `
             <div class="greeting-strip">
               <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! 🔥 ${user.current_streak} дней подряд · <strong>${Math.round(user.points_total)}</strong> баллов</p>
-              <a class="btn secondary" href="profile.html">Мой профиль</a>
+              <a class="btn secondary" href="/profile">Мой профиль</a>
             </div>`;
         } else if (user.role === "organizer") {
           const events = await api.get("/events?mine_only=true");
@@ -101,7 +104,7 @@
           root.innerHTML = `
             <div class="greeting-strip">
               <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! У вас ${events.length} мероприятий, ${pending} заявок ждут решения</p>
-              <a class="btn secondary" href="organizer.html">Мои мероприятия</a>
+              <a class="btn secondary" href="/organizer">Мои мероприятия</a>
             </div>`;
         } else if (user.role === "admin") {
           const [eventsTickets, courseTickets, pendingReports] = await Promise.all([
@@ -112,7 +115,7 @@
           root.innerHTML = `
             <div class="greeting-strip">
               <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! На модерации: ${eventsTickets.length} мероприятий · ${courseTickets.length} курсов · ${pendingReports.length} репортов</p>
-              <a class="btn secondary" href="tickets.html">Тикеты</a>
+              <a class="btn secondary" href="/tickets">Тикеты</a>
             </div>`;
         }
       } catch (e) {

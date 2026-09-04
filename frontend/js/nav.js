@@ -6,36 +6,36 @@ if ("serviceWorker" in navigator) {
 
 const NAV_LINKS_BY_ROLE = {
   guest: [
-    ["index.html", "Главная"],
-    ["map.html", "Карта"],
-    ["lessons.html", "Уроки"],
-    ["events.html", "Мероприятия"],
-    ["reports.html", "Репорты"],
-    ["leaderboard.html", "Лидерборд"],
+    ["/index", "Главная"],
+    ["/map", "Карта"],
+    ["/lessons", "Уроки"],
+    ["/events", "Мероприятия"],
+    ["/reports", "Репорты"],
+    ["/leaderboard", "Лидерборд"],
   ],
   volunteer: [
-    ["index.html", "Главная"],
-    ["map.html", "Карта"],
-    ["lessons.html", "Уроки"],
-    ["events.html", "Мероприятия"],
-    ["reports.html", "Репорты"],
-    ["leaderboard.html", "Лидерборд"],
+    ["/index", "Главная"],
+    ["/map", "Карта"],
+    ["/lessons", "Уроки"],
+    ["/events", "Мероприятия"],
+    ["/reports", "Репорты"],
+    ["/leaderboard", "Лидерборд"],
   ],
   organizer: [
-    ["index.html", "Главная"],
-    ["map.html", "Карта"],
-    ["lessons.html", "Курсы"],
-    ["organizer.html", "Мои мероприятия"],
-    ["reports.html", "Репорты"],
-    ["leaderboard.html", "Лидерборд"],
+    ["/index", "Главная"],
+    ["/map", "Карта"],
+    ["/lessons", "Курсы"],
+    ["/organizer", "Мои мероприятия"],
+    ["/reports", "Репорты"],
+    ["/leaderboard", "Лидерборд"],
   ],
   admin: [
-    ["index.html", "Главная"],
-    ["map.html", "Карта"],
-    ["tickets.html", "Тикеты"],
-    ["admin.html", "Статистика"],
-    ["reports.html", "Репорты"],
-    ["leaderboard.html", "Лидерборд"],
+    ["/index", "Главная"],
+    ["/map", "Карта"],
+    ["/tickets", "Тикеты"],
+    ["/admin", "Статистика"],
+    ["/reports", "Репорты"],
+    ["/leaderboard", "Лидерборд"],
   ],
 };
 
@@ -68,23 +68,23 @@ async function renderNav(activePage) {
             <button class="btn secondary" id="nav-mark-all-read" style="padding:2px 8px; font-size:0.78rem">Прочитать все</button>
           </div>
           <div class="dropdown-panel-body" id="nav-notif-body"><p class="muted" style="padding:10px 0">Загрузка…</p></div>
-          <div class="dropdown-panel-footer"><a href="notifications.html">Показать все →</a></div>
+          <div class="dropdown-panel-footer"><a href="/notifications">Показать все →</a></div>
         </div>
       </span>
-      <a class="nav-link${activePage === "profile.html" ? " active" : ""}" href="profile.html">${escapeHtml(user.display_name)}</a>
+      <a class="nav-link${activePage === "/profile" ? " active" : ""}" href="/profile">${escapeHtml(user.display_name)}</a>
       <span class="points-pill">${Math.round(user.points_total)} б.</span>
       <a class="nav-link" href="#" id="nav-logout">Выйти</a>
     `;
   } else {
     authHtml = `
-      <a class="nav-link${activePage === "login.html" ? " active" : ""}" href="login.html">Войти</a>
-      <a class="nav-link${activePage === "register.html" ? " active" : ""}" href="register.html">Регистрация</a>
+      <a class="nav-link${activePage === "/login" ? " active" : ""}" href="/login">Войти</a>
+      <a class="nav-link${activePage === "/register" ? " active" : ""}" href="/register">Регистрация</a>
     `;
   }
 
   mount.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-brand" href="index.html">🌊 Чистый берег</a>
+      <a class="nav-brand" href="/index"><img src="/logo.png" alt="GoodWill" class="brand-logo" /></a>
       ${linkHtml}
       ${authHtml}
     </div>
@@ -95,7 +95,7 @@ async function renderNav(activePage) {
     logoutBtn.addEventListener("click", (e) => {
       e.preventDefault();
       clearTokens();
-      window.location.href = "index.html";
+      window.location.href = "/index";
     });
   }
 
@@ -158,4 +158,21 @@ async function initNotificationBell() {
   } catch (e) {
     /* тихо игнорируем — колокольчик просто без счётчика */
   }
+}
+
+function renderFooter() {
+  const mount = document.getElementById("app-footer");
+  if (!mount) return;
+  mount.innerHTML = `
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-top">
+          <img src="logo.png" alt="GoodWill" class="footer-logo" />
+          <a class="btn secondary" href="mailto:admin@syharik.ru">Связаться с нами</a>
+        </div>
+        <p>© 2026 GoodWill. Все права защищены. e-mail: <a href="mailto:admin@syharik.ru">admin@syharik.ru</a></p>
+        <p>Проект разработан на хакатоне КосмоХакатон 2026 командой «Злая IT клиника» по мотивам кейса компании «СР Дата».</p>
+      </div>
+    </footer>
+  `;
 }

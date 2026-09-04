@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Тикеты — Чистый берег</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
@@ -50,12 +50,15 @@
     </div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/nav.js"></script>
-  <script src="js/tickets.js"></script>
+  <div id="app-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/tickets.js"></script>
   <script>
-    renderNav("tickets.html");
+    renderNav("/tickets");
+    renderFooter();
     initTicketsPage();
   </script>
 </body>

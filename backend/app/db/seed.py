@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.seed_images import generate_pair
+from app.db.seed_institutions import seed_institutions
 from app.db.session import AsyncSessionLocal, engine
 from app.models import Base  # imports all model modules, registering them on Base.metadata
 from app.models.event import Event, EventType
@@ -94,9 +95,13 @@ async def seed() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as db:
+        institutions_added = await seed_institutions(db)
+        if institutions_added:
+            logger.info("Institutions seeded: %d new", institutions_added)
+
         existing = await db.execute(select(User).limit(1))
         if existing.scalar_one_or_none() is not None:
-            logger.info("Seed skipped: data already present")
+            logger.info("Seed skipped: demo users already present")
             return
 
         team = Team(name="Эко-клуб «Чистый берег»", type=TeamType.club, city="Анапа")

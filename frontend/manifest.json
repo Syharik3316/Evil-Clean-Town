@@ -2,7 +2,7 @@
   "name": "Чистый берег",
   "short_name": "Чистый берег",
   "description": "Платформа популяризации экологического мониторинга ДЗЗ",
-  "start_url": "/index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f4f8f7",

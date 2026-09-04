@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Профиль — Чистый берег</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
@@ -27,7 +27,7 @@
   <div class="modal-backdrop" id="manual-verify-modal" hidden>
     <div class="modal">
       <h2>Ручная верификация</h2>
-      <p class="muted">Введите паспортные данные для подтверждения возраста (демо-режим: подтверждение выполняется сразу после отправки).</p>
+      <p class="muted">Введите паспортные данные для подтверждения возраста.</p>
       <div id="manual-verify-alert"></div>
       <form id="manual-verify-form">
         <div class="field"><label for="mv-full-name">ФИО</label><input type="text" id="mv-full-name" required /></div>
@@ -44,12 +44,15 @@
     </div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/nav.js"></script>
-  <script src="js/profile.js"></script>
+  <div id="app-footer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/profile.js"></script>
   <script>
-    renderNav("profile.html");
+    renderNav("/profile");
+    renderFooter();
     initProfilePage();
   </script>
 </body>

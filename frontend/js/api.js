@@ -100,7 +100,7 @@ async function currentUser(force = false) {
 
 function requireAuth() {
   if (!isLoggedIn()) {
-    window.location.href = "login.html";
+    window.location.href = "/login";
   }
 }
 

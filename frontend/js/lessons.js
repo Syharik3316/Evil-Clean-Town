@@ -35,7 +35,7 @@ async function renderLessonList() {
           <h2 style="margin-top:0">${escapeHtml(l.title)}${l.is_base_course ? ' <span class="badge">Базовый курс</span>' : ""}</h2>
           <p class="muted">${escapeHtml(l.summary)}</p>
           <p class="badge">+${l.points_reward} баллов</p>
-          <div><a class="btn" href="lessons.html?id=${l.id}">Открыть урок</a></div>
+          <div><a class="btn" href="/lessons?id=${l.id}">Открыть урок</a></div>
         </div>`
           )
           .join("")
@@ -72,7 +72,7 @@ function renderCreateCourseForm() {
         summary: document.getElementById("cc-summary").value.trim(),
         points_reward: parseInt(document.getElementById("cc-points").value, 10) || 0,
       });
-      window.location.href = `lessons.html?id=${lesson.id}`;
+      window.location.href = `/lessons?id=${lesson.id}`;
     } catch (err) {
       alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
     }
@@ -87,7 +87,7 @@ async function loadMyCourses() {
       ? `<table><tbody>${courses
           .map(
             (c) =>
-              `<tr><td><a href="lessons.html?id=${c.id}">${escapeHtml(c.title)}</a></td><td>${LESSON_STATUS_LABELS[c.status] || c.status}</td></tr>`
+              `<tr><td><a href="/lessons?id=${c.id}">${escapeHtml(c.title)}</a></td><td>${LESSON_STATUS_LABELS[c.status] || c.status}</td></tr>`
           )
           .join("")}</tbody></table>`
       : '<p class="muted">Вы ещё не создавали курсы.</p>';
@@ -138,7 +138,7 @@ async function renderLessonDetail(lessonId) {
     .join("");
 
   root.innerHTML = `
-    <a href="lessons.html" class="muted">← Все уроки</a>
+    <a href="/lessons" class="muted">← Все уроки</a>
     <h1>${escapeHtml(lesson.title)} ${isOwner ? `<span class="badge">${LESSON_STATUS_LABELS[lesson.status] || lesson.status}</span>` : ""}</h1>
     <p class="lead">${escapeHtml(lesson.summary)}</p>
     ${cardsHtml}
@@ -154,7 +154,7 @@ async function renderLessonDetail(lessonId) {
 
   document.getElementById("complete-btn")?.addEventListener("click", async () => {
     if (!isLoggedIn()) {
-      window.location.href = "login.html";
+      window.location.href = "/login";
       return;
     }
     const answers = lesson.cards
@@ -179,7 +179,7 @@ async function renderLessonDetail(lessonId) {
       }
       resultEl.innerHTML = `<div class="alert success">${escapeHtml(msg)}</div>`;
       cachedUser = null;
-      renderNav("lessons.html");
+      renderNav("/lessons");
     } catch (e) {
       resultEl.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
     }

@@ -29,6 +29,8 @@ class TeamType(str, enum.Enum):
     school = "school"
     club = "club"
     city = "city"
+    university = "university"
+    college = "college"
 
 
 class Team(TimestampMixin, Base):

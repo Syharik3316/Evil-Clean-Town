@@ -42,7 +42,7 @@ function renderEventCard(ev, user) {
         <button class="btn secondary" data-action="checkin" data-id="${ev.id}">Подтвердить участие (гео-чекин)</button>
       </div>`;
   } else if (isOwner) {
-    actionsHtml = `<div style="margin-top:10px"><a class="btn secondary" href="organizer.html">Управлять мероприятием →</a></div>`;
+    actionsHtml = `<div style="margin-top:10px"><a class="btn secondary" href="/organizer">Управлять мероприятием →</a></div>`;
   } else {
     actionsHtml = `<p class="muted" style="margin-top:10px">Запись на мероприятия доступна волонтёрам.</p>`;
   }
@@ -75,7 +75,7 @@ function eventMsg(id, html, cls = "success") {
 }
 
 async function registerForEvent(id) {
-  if (!isLoggedIn()) return (window.location.href = "login.html");
+  if (!isLoggedIn()) return (window.location.href = "/login");
   const roleSelect = document.getElementById(`event-role-${id}`);
   const role_id = roleSelect && roleSelect.value ? parseInt(roleSelect.value, 10) : null;
   try {
@@ -91,7 +91,7 @@ async function registerForEvent(id) {
 }
 
 function checkinEvent(id) {
-  if (!isLoggedIn()) return (window.location.href = "login.html");
+  if (!isLoggedIn()) return (window.location.href = "/login");
   if (!navigator.geolocation) {
     eventMsg(id, "Геолокация не поддерживается вашим браузером.", "error");
     return;
@@ -106,7 +106,7 @@ function checkinEvent(id) {
         });
         eventMsg(id, "Чекин выполнен, баллы начислены! Спасибо за участие 🌊");
         cachedUser = null;
-        renderNav("events.html");
+        renderNav("/events");
       } catch (e) {
         eventMsg(id, escapeHtml(e.message), "error");
       }
