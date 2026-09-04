@@ -20,8 +20,8 @@ async function renderLessonList() {
   root.innerHTML = `
     <h1>Обучающие модули</h1>
     <p class="lead">Короткие уроки о том, как устроен экомониторинг побережья, и базовый курс для участия в уборках.</p>
-    <div class="grid" id="lesson-grid">Загрузка…</div>
-    ${canAuthor ? '<h2>Создать курс</h2><div class="card" id="create-course-card"></div><h2>Мои курсы</h2><div id="my-courses">Загрузка…</div>' : ""}
+    <div class="grid" id="lesson-grid">${skeletonCards(3)}</div>
+    ${canAuthor ? '<h2>Создать курс</h2><div class="card" id="create-course-card"></div><h2>Мои курсы</h2><div id="my-courses">' + skeletonLines(2) + '</div>' : ""}
   `;
 
   try {
@@ -108,15 +108,18 @@ async function renderLessonDetail(lessonId) {
     return;
   }
 
+  const user = isLoggedIn() ? await currentUser() : null;
+  const isOwner = user && (user.role === "admin" || user.id === lesson.created_by_id);
+  const canEarnPoints = !user || user.role === "volunteer";
+
   const cardsHtml = lesson.cards
     .map((c) => {
       if (c.content_type === "quiz") {
         const options = (c.quiz_options || [])
-          .map(
-            (opt, i) => `
-            <label>
-              <input type="radio" name="quiz-${c.id}" value="${i}" /> ${escapeHtml(opt)}
-            </label>`
+          .map((opt, i) =>
+            canEarnPoints
+              ? `<label><input type="radio" name="quiz-${c.id}" value="${i}" /> ${escapeHtml(opt)}</label>`
+              : `<p class="muted" style="margin:2px 0">• ${escapeHtml(opt)}</p>`
           )
           .join("");
         return `
@@ -134,16 +137,14 @@ async function renderLessonDetail(lessonId) {
     })
     .join("");
 
-  const user = isLoggedIn() ? await currentUser() : null;
-  const isOwner = user && (user.role === "admin" || user.id === lesson.created_by_id);
-
   root.innerHTML = `
     <a href="lessons.html" class="muted">← Все уроки</a>
     <h1>${escapeHtml(lesson.title)} ${isOwner ? `<span class="badge">${LESSON_STATUS_LABELS[lesson.status] || lesson.status}</span>` : ""}</h1>
     <p class="lead">${escapeHtml(lesson.summary)}</p>
     ${cardsHtml}
     <div id="lesson-result"></div>
-    ${lesson.status === "published" ? `<button class="btn" id="complete-btn">Завершить урок (+${lesson.points_reward} баллов)</button>` : ""}
+    ${lesson.status === "published" && canEarnPoints ? `<button class="btn" id="complete-btn">Завершить урок (+${lesson.points_reward} баллов)</button>` : ""}
+    ${!canEarnPoints && !isOwner ? '<p class="muted">Прохождение урока за баллы доступно волонтёрам.</p>' : ""}
     ${isOwner ? '<div id="author-tools"></div>' : ""}
   `;
 

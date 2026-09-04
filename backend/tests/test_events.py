@@ -185,6 +185,36 @@ async def test_admin_cannot_register_for_event(client, db_session):
     assert res.status_code == 403
 
 
+async def test_organizer_cannot_register_for_event(client, db_session):
+    await create_user(db_session, "org3b@example.com", UserRole.organizer)
+    org_token = await login(client, "org3b@example.com")
+    site_id = await _create_site(db_session)
+    event_id = await _create_event(client, db_session, org_token, site_id)
+
+    await create_user(db_session, "org3c@example.com", UserRole.organizer)
+    other_org_token = await login(client, "org3c@example.com")
+
+    res = await client.post(f"/api/v1/events/{event_id}/register", headers=auth_headers(other_org_token))
+    assert res.status_code == 403
+
+
+async def test_organizer_cannot_checkin(client, db_session):
+    await create_user(db_session, "org3d@example.com", UserRole.organizer)
+    org_token = await login(client, "org3d@example.com")
+    site_id = await _create_site(db_session)
+    event_id = await _create_event(client, db_session, org_token, site_id)
+
+    await create_user(db_session, "org3e@example.com", UserRole.organizer)
+    other_org_token = await login(client, "org3e@example.com")
+
+    res = await client.post(
+        f"/api/v1/events/{event_id}/checkin",
+        json={"lat": EVENT_LAT, "lon": EVENT_LON},
+        headers=auth_headers(other_org_token),
+    )
+    assert res.status_code == 403
+
+
 async def test_close_registration_blocks_new_applications(client, db_session):
     await create_user(db_session, "org4@example.com", UserRole.organizer)
     org_token = await login(client, "org4@example.com")

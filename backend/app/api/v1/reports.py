@@ -31,6 +31,11 @@ async def submit_report(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if user.role.value != "volunteer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Отправка репортов о мусоре доступна только волонтёрам"
+        )
+
     if photo.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Допустимы только изображения JPEG/PNG/WebP")
 

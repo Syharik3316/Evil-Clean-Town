@@ -104,6 +104,30 @@ async def test_volunteer_cannot_moderate(client, db_session):
     assert res.status_code == 403
 
 
+async def test_organizer_cannot_submit_report(client, db_session):
+    await create_user(db_session, "org-reporter@example.com", UserRole.organizer)
+    token = await login(client, "org-reporter@example.com")
+    res = await client.post(
+        "/api/v1/reports",
+        data={"lat": "1", "lon": "1"},
+        files={"photo": ("photo.png", _fake_photo(), "image/png")},
+        headers=auth_headers(token),
+    )
+    assert res.status_code == 403
+
+
+async def test_admin_cannot_submit_report(client, db_session):
+    await create_user(db_session, "admin-reporter@example.com", UserRole.admin)
+    token = await login(client, "admin-reporter@example.com")
+    res = await client.post(
+        "/api/v1/reports",
+        data={"lat": "1", "lon": "1"},
+        files={"photo": ("photo.png", _fake_photo(), "image/png")},
+        headers=auth_headers(token),
+    )
+    assert res.status_code == 403
+
+
 async def test_invalid_content_type_rejected(client, db_session):
     await create_user(db_session, "reporter4@example.com", UserRole.volunteer)
     token = await login(client, "reporter4@example.com")

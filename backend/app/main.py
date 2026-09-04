@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,7 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.core.config import settings
 
+logger = logging.getLogger("app.startup")
+
 app = FastAPI(title=settings.app_name)
+
+if settings.environment == "production":
+    if settings.cors_origins == ["*"]:
+        logger.warning(
+            "ENVIRONMENT=production, но CORS_ORIGINS=[\"*\"] — укажите конкретные домены фронтенда в .env"
+        )
+    if settings.jwt_secret_key == "change-me-in-production":
+        logger.warning("ENVIRONMENT=production, но JWT_SECRET_KEY не изменён с дефолтного значения")
 
 app.add_middleware(
     CORSMiddleware,

@@ -10,40 +10,24 @@
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
   <div class="container">
-    <h1>Citizen science: репорты о мусоре</h1>
-    <p class="lead">Нашёл замусоренный участок берега? Сфотографируй и отправь — после модерации тебе начислят баллы.</p>
+    <div id="reports-root">Загрузка…</div>
+  </div>
 
-    <div class="card" id="report-form-card">
-      <h2 style="margin-top:0">Новый репорт</h2>
-      <div id="report-alert"></div>
-      <form id="report-form">
-        <div class="field">
-          <label for="photo">Фото (JPEG/PNG/WebP)</label>
-          <input type="file" id="photo" accept="image/jpeg,image/png,image/webp" required />
+  <div class="modal-backdrop" id="reason-modal" hidden>
+    <div class="modal">
+      <h2>Причина отклонения</h2>
+      <form id="reason-form">
+        <div class="field"><label for="reason-text">Причина</label><textarea id="reason-text" rows="3" required></textarea></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn danger" type="submit">Отклонить</button>
+          <button class="btn secondary" type="button" id="reason-cancel">Отмена</button>
         </div>
-        <div class="field">
-          <label for="description">Описание</label>
-          <textarea id="description" rows="3" placeholder="Что и где вы обнаружили?"></textarea>
-        </div>
-        <div class="field">
-          <label for="region">Регион</label>
-          <input type="text" id="region" placeholder="Например, Краснодарский край" />
-        </div>
-        <div class="field">
-          <button type="button" class="btn secondary" id="geo-btn">📍 Определить моё местоположение</button>
-          <p class="muted" id="geo-status">Координаты не определены</p>
-          <input type="hidden" id="lat" />
-          <input type="hidden" id="lon" />
-        </div>
-        <button class="btn" type="submit">Отправить репорт</button>
       </form>
     </div>
-
-    <h2>Мои репорты</h2>
-    <div id="reports-list" class="grid">Загрузка…</div>
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/reports.js"></script>
   <script>

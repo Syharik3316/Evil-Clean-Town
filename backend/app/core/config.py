@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "Чистый берег API"
+    environment: str = "development"
     database_url: str = "sqlite+aiosqlite:///./local.db"
 
     jwt_secret_key: str = "change-me-in-production"

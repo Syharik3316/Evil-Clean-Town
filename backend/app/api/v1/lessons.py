@@ -174,6 +174,11 @@ async def complete_lesson(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if user.role != UserRole.volunteer:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Прохождение уроков за баллы доступно только волонтёрам"
+        )
+
     lesson = await _get_lesson_with_cards(db, lesson_id)
 
     existing = await db.execute(

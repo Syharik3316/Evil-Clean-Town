@@ -198,9 +198,9 @@ async def register_for_event(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if user.role == UserRole.admin:
+    if user.role != UserRole.volunteer:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Администратор не может участвовать в мероприятиях"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Только волонтёры могут записываться на мероприятия"
         )
 
     event = await db.get(Event, event_id)
@@ -289,6 +289,11 @@ async def checkin(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if user.role != UserRole.volunteer:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Только волонтёры могут отмечать участие в мероприятиях"
+        )
+
     event = await db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Мероприятие не найдено")

@@ -12,13 +12,15 @@
   <div class="container">
     <div id="profile-root">Загрузка…</div>
 
-    <h2>Лидерборд</h2>
-    <div class="card">
-      <div style="display:flex; gap:8px; margin-bottom:10px">
-        <button class="btn secondary" data-scope="users">Пользователи</button>
-        <button class="btn secondary" data-scope="teams">Команды/школы</button>
+    <div id="leaderboard-section">
+      <h2>Лидерборд</h2>
+      <div class="card">
+        <div style="display:flex; gap:8px; margin-bottom:10px">
+          <button class="btn secondary" data-scope="users">Пользователи</button>
+          <button class="btn secondary" data-scope="teams">Команды/школы</button>
+        </div>
+        <div id="leaderboard-table">Загрузка…</div>
       </div>
-      <div id="leaderboard-table">Загрузка…</div>
     </div>
   </div>
 
@@ -43,6 +45,7 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/profile.js"></script>
   <script>

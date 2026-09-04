@@ -1,4 +1,4 @@
-let activeTicketTab = "reports";
+let activeTicketTab = "events";
 let currentReasonHandler = null;
 let currentEditHandler = null;
 let editModalMode = "event";
@@ -42,7 +42,7 @@ async function initTicketsPage() {
     if (currentEditHandler) await currentEditHandler(payload);
   });
 
-  switchTab("reports");
+  switchTab("events");
 }
 
 function switchTab(tab) {
@@ -50,8 +50,7 @@ function switchTab(tab) {
   document.querySelectorAll("[data-tab]").forEach((btn) => {
     btn.classList.toggle("secondary", btn.dataset.tab !== tab);
   });
-  if (tab === "reports") loadReportsTab();
-  else if (tab === "events") loadEventsTab();
+  if (tab === "events") loadEventsTab();
   else loadCoursesTab();
 }
 
@@ -73,65 +72,6 @@ function openEditModal(item, handler, mode = "event") {
   document.getElementById("edit-event-modal").hidden = false;
 }
 
-async function loadReportsTab() {
-  const root = document.getElementById("ticket-root");
-  root.innerHTML = `
-    <div class="field" style="max-width:260px">
-      <label for="reports-sort">Сортировка</label>
-      <select id="reports-sort">
-        <option value="created_at">По дате создания</option>
-        <option value="region">По региону</option>
-      </select>
-    </div>
-    <div id="reports-table">Загрузка…</div>
-  `;
-  document.getElementById("reports-sort").addEventListener("change", loadReportsTable);
-  loadReportsTable();
-}
-
-async function loadReportsTable() {
-  const el = document.getElementById("reports-table");
-  const sortBy = document.getElementById("reports-sort").value;
-  try {
-    const reports = await api.get(`/reports?status_filter=pending&sort_by=${sortBy}`);
-    if (!reports.length) {
-      el.innerHTML = '<p class="muted">Нет репортов на модерации.</p>';
-      return;
-    }
-    el.innerHTML = `<div class="grid">${reports.map(reportCard).join("")}</div>`;
-    reports.forEach(bindReportCard);
-  } catch (e) {
-    el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
-  }
-}
-
-function reportCard(r) {
-  return `
-    <div class="card" id="report-${r.id}">
-      <img src="${r.photo_url}" style="width:100%;border-radius:8px;margin-bottom:8px" />
-      <p>${escapeHtml(r.description || "Без описания")}</p>
-      <p class="muted">${formatDate(r.created_at)} · ${escapeHtml(r.region || "регион не указан")} · ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</p>
-      <div style="display:flex; gap:8px">
-        <button class="btn" data-approve>Принять</button>
-        <button class="btn danger" data-reject>Отклонить</button>
-      </div>
-    </div>`;
-}
-
-function bindReportCard(r) {
-  const card = document.getElementById(`report-${r.id}`);
-  card.querySelector("[data-approve]").addEventListener("click", async () => {
-    await api.post(`/reports/${r.id}/moderate`, { approve: true });
-    loadReportsTable();
-  });
-  card.querySelector("[data-reject]").addEventListener("click", () => {
-    openReasonModal(async (reason) => {
-      await api.post(`/reports/${r.id}/moderate`, { approve: false, comment: reason });
-      loadReportsTable();
-    });
-  });
-}
-
 async function loadEventsTab() {
   const root = document.getElementById("ticket-root");
   root.innerHTML = `
@@ -143,7 +83,7 @@ async function loadEventsTab() {
         <option value="organization">По организации</option>
       </select>
     </div>
-    <div id="events-table">Загрузка…</div>
+    <div id="events-table">${skeletonLines(3)}</div>
   `;
   document.getElementById("events-sort").addEventListener("change", loadEventsTable);
   loadEventsTable();
@@ -204,7 +144,7 @@ function bindEventTicketRow(ev) {
 
 async function loadCoursesTab() {
   const root = document.getElementById("ticket-root");
-  root.innerHTML = `<div id="courses-table">Загрузка…</div>`;
+  root.innerHTML = `<div id="courses-table">${skeletonLines(3)}</div>`;
   loadCoursesTable();
 }
 

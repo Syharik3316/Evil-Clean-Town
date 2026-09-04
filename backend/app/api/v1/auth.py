@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_db
 from app.core.security import create_token, decode_token, hash_password, verify_password
 from app.models.mixins import utcnow
 from app.models.user import Organization, User, UserRole
@@ -12,7 +12,6 @@ from app.schemas.user import (
     RefreshRequest,
     TokenPair,
     UserLogin,
-    UserMe,
     UserRegister,
     VerificationSentOut,
     VerifyEmailRequest,
@@ -137,8 +136,3 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
     return _token_pair(user.id)
-
-
-@router.get("/me", response_model=UserMe)
-async def me(user: User = Depends(get_current_user)):
-    return user

@@ -10,10 +10,10 @@ async function initAdminPage() {
 
   root.innerHTML = `
     <h1>Статистика фонда</h1>
-    <div id="stats-block" class="card">Загрузка статистики…</div>
+    <div id="stats-block" class="card">${skeletonLines(4)}</div>
 
     <h2>История всех мероприятий</h2>
-    <div id="events-history">Загрузка…</div>
+    <div id="events-history">${skeletonLines(3)}</div>
   `;
 
   loadStats();

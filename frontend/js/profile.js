@@ -1,9 +1,133 @@
 async function initProfilePage() {
   requireAuth();
+  const user = await currentUser(true);
+
+  if (user.role === "organizer") {
+    document.getElementById("leaderboard-section").remove();
+    renderOrganizerProfile(user);
+  } else if (user.role === "admin") {
+    document.getElementById("leaderboard-section").remove();
+    renderAdminProfile(user);
+  } else {
+    await renderVolunteerProfile(user);
+    bindLeaderboard();
+  }
+}
+
+function roleLabel(role) {
+  return { volunteer: "Волонтёр", organizer: "Организатор", admin: "Администратор" }[role] || role;
+}
+
+function ageMethodLabel(method) {
+  return { gosuslugi: "Госуслуги", manual: "вручную" }[method] || method;
+}
+
+function avatarCircleHtml(user, frameClass = "frame-none") {
+  return `<div class="${frameClass}" style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700">
+    ${escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase())}
+  </div>`;
+}
+
+/* ---------- Организатор: компактный профиль организации ---------- */
+
+function renderOrganizerProfile(user) {
+  const root = document.getElementById("profile-root");
+  const org = user.organization;
+
+  root.innerHTML = `
+    <div style="display:flex; align-items:center; gap:16px">
+      ${avatarCircleHtml(user)}
+      <div>
+        <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
+        <span class="badge">${roleLabel(user.role)}</span>
+      </div>
+    </div>
+
+    <h2>Организация</h2>
+    <div class="card">
+      ${
+        org
+          ? `<p><strong>${escapeHtml(org.name)}</strong></p>
+             <p class="muted">ИНН ${escapeHtml(org.inn)} · ${org.legal_type === "legal_entity" ? "Юридическое лицо" : "ИП"}</p>
+             <p class="badge">${Math.round(org.points_total)} баллов организации</p>`
+          : '<p class="muted">Организация не указана.</p>'
+      }
+    </div>
+
+    <h2>Быстрые действия</h2>
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin-top:0">🧹 Мои мероприятия</h2>
+        <p class="muted">Создание мероприятий и заявки волонтёров.</p>
+        <a href="organizer.html">Перейти →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📘 Курсы</h2>
+        <p class="muted">Создание и модерация обучающих курсов.</p>
+        <a href="lessons.html">Перейти →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📸 Репорты</h2>
+        <p class="muted">Модерация репортов о мусоре от волонтёров.</p>
+        <a href="reports.html">Перейти →</a>
+      </div>
+    </div>
+
+    <h2>Аккаунт</h2>
+    <div class="card">
+      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
+      <p>Email: <strong>${escapeHtml(user.email)}</strong> ${user.email_verified ? '<span class="badge approved">подтверждён</span>' : '<span class="badge pending">не подтверждён</span>'}</p>
+    </div>
+  `;
+}
+
+/* ---------- Админ: минимальный аккаунт-профиль ---------- */
+
+function renderAdminProfile(user) {
   const root = document.getElementById("profile-root");
 
-  const [user, achievements, points, teams, framesRes] = await Promise.all([
-    currentUser(true),
+  root.innerHTML = `
+    <div style="display:flex; align-items:center; gap:16px">
+      ${avatarCircleHtml(user)}
+      <div>
+        <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
+        <span class="badge">${roleLabel(user.role)}</span>
+      </div>
+    </div>
+
+    <h2>Быстрые действия</h2>
+    <div class="grid">
+      <div class="card">
+        <h2 style="margin-top:0">🎫 Тикеты</h2>
+        <p class="muted">Модерация предложенных мероприятий и курсов.</p>
+        <a href="tickets.html">Перейти →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📊 Статистика</h2>
+        <p class="muted">Сводная статистика фонда.</p>
+        <a href="admin.html">Перейти →</a>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">📸 Репорты</h2>
+        <p class="muted">Модерация репортов о мусоре.</p>
+        <a href="reports.html">Перейти →</a>
+      </div>
+    </div>
+
+    <h2>Аккаунт</h2>
+    <div class="card">
+      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
+      <p>Email: <strong>${escapeHtml(user.email)}</strong></p>
+    </div>
+  `;
+}
+
+/* ---------- Волонтёр: геймификация ---------- */
+
+async function renderVolunteerProfile(user) {
+  const root = document.getElementById("profile-root");
+
+  const [achievements, points, teams, framesRes] = await Promise.all([
     api.get("/users/me/achievements"),
     api.get("/users/me/points"),
     api.get("/teams"),
@@ -36,9 +160,7 @@ async function initProfilePage() {
 
   root.innerHTML = `
     <div style="display:flex; align-items:center; gap:16px">
-      <div class="${frameClass}" style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700">
-        ${escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase())}
-      </div>
+      ${avatarCircleHtml(user, frameClass)}
       <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
     </div>
     <div class="grid">
@@ -160,7 +282,7 @@ async function initProfilePage() {
     }
     try {
       await navigator.clipboard.writeText(text);
-      statusEl.textContent = "Текст скопирован в буфер обмена!";
+      toast("Текст скопирован в буфер обмена!", "success");
     } catch (e) {
       statusEl.textContent = text;
     }
@@ -225,16 +347,6 @@ async function initProfilePage() {
       statusEl.textContent = err.message;
     }
   });
-
-  bindLeaderboard();
-}
-
-function roleLabel(role) {
-  return { volunteer: "Волонтёр", organizer: "Организатор", admin: "Администратор" }[role] || role;
-}
-
-function ageMethodLabel(method) {
-  return { gosuslugi: "Госуслуги", manual: "вручную" }[method] || method;
 }
 
 function bindLeaderboard() {
@@ -245,7 +357,7 @@ function bindLeaderboard() {
 
 async function loadLeaderboard(scope) {
   const el = document.getElementById("leaderboard-table");
-  el.innerHTML = "Загрузка…";
+  el.innerHTML = skeletonLines(4);
   try {
     const rows = await api.get(`/leaderboard?scope=${scope}&limit=20`);
     if (!rows.length) {

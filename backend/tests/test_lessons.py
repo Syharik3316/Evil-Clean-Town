@@ -2,6 +2,7 @@ import pytest
 
 from app.models.gamification import Achievement, AchievementCriteria
 from app.models.lesson import CardContentType, Lesson, LessonCard
+from app.models.user import UserRole
 from tests.helpers import auth_headers, create_user, login
 
 pytestmark = pytest.mark.asyncio
@@ -89,3 +90,29 @@ async def test_wrong_quiz_answer_scores_zero_but_still_awards_completion_points(
     body = res.json()
     assert body["score"] == 0
     assert body["points_awarded"] == 10
+
+
+async def test_organizer_cannot_complete_lesson_for_points(client, db_session):
+    lesson_id, card_id = await _seed_lesson(db_session)
+    await create_user(db_session, "org-student@example.com", UserRole.organizer)
+    token = await login(client, "org-student@example.com")
+
+    res = await client.post(
+        f"/api/v1/lessons/{lesson_id}/complete",
+        json={"answers": [{"card_id": card_id, "selected_index": 1}]},
+        headers=auth_headers(token),
+    )
+    assert res.status_code == 403
+
+
+async def test_admin_cannot_complete_lesson_for_points(client, db_session):
+    lesson_id, card_id = await _seed_lesson(db_session)
+    await create_user(db_session, "admin-student@example.com", UserRole.admin)
+    token = await login(client, "admin-student@example.com")
+
+    res = await client.post(
+        f"/api/v1/lessons/{lesson_id}/complete",
+        json={"answers": [{"card_id": card_id, "selected_index": 1}]},
+        headers=auth_headers(token),
+    )
+    assert res.status_code == 403

@@ -1,0 +1,29 @@
+# Секреты — .env уже закоммичен в истории репозитория; при первой же возможности
+# ротируйте JWT_SECRET_KEY / пароли БД и Grafana. Новые изменения .env в git больше не попадут.
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+backend/.venv/
+
+# Данные и загрузки
+backend/local.db
+*.db
+backend/uploads/
+uploads/
+backend/app/static/
+
+# Node (frontend/package.json — dev-сервер serve)
+node_modules/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
