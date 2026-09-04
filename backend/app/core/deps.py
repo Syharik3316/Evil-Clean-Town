@@ -35,6 +35,18 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    if token is None:
+        return None
+    try:
+        return await get_current_user(token=token, db=db)
+    except HTTPException:
+        return None
+
+
 def require_roles(*roles: UserRole):
     async def checker(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:

@@ -46,6 +46,7 @@ function bindReportForm() {
     formData.append("lat", lat);
     formData.append("lon", lon);
     formData.append("description", document.getElementById("description").value);
+    formData.append("region", document.getElementById("region").value);
     formData.append("photo", document.getElementById("photo").files[0]);
 
     try {

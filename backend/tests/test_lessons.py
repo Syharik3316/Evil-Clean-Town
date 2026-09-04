@@ -51,6 +51,9 @@ async def test_complete_lesson_awards_points_and_scores_quiz(client, db_session)
     me = await client.get("/api/v1/users/me", headers=auth_headers(token))
     assert me.json()["points_total"] == 15  # 10 for lesson + 5 achievement bonus
 
+    res = await client.get("/api/v1/notifications", headers=auth_headers(token))
+    assert any(n["type"] == "course_completed" for n in res.json())
+
 
 async def test_complete_lesson_twice_is_idempotent(client, db_session):
     lesson_id, card_id = await _seed_lesson(db_session)

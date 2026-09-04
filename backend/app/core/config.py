@@ -20,5 +20,27 @@ class Settings(BaseSettings):
 
     seed_on_startup: bool = False
 
+    # SMTP (отправка кода подтверждения email). Если smtp_host пуст — письма не отправляются,
+    # код только логируется (для локальной разработки/тестов без реального почтового сервера).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "no-reply@chistybereg.ru"
+    smtp_use_tls: bool = True
+    email_verification_code_ttl_minutes: int = 15
+
+    # Госуслуги (ЕСИА) — заготовка подключения, без реального использования.
+    # Пока client_id пуст, эндпоинт возвращает 501 "интеграция в разработке".
+    gosuslugi_client_id: str = ""
+    gosuslugi_client_secret: str = ""
+    gosuslugi_redirect_uri: str = ""
+    gosuslugi_authorize_url: str = "https://esia.gosuslugi.ru/aas/oauth2/ac"
+
+    min_age_years: int = 14
+
+    # Read-only Postgres-роль для Grafana (см. docker-compose.yml, grafana/provisioning).
+    grafana_db_password: str = "change-me"
+
 
 settings = Settings()

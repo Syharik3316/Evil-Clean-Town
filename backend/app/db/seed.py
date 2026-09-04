@@ -13,7 +13,7 @@ from app.models.event import Event, EventType
 from app.models.gamification import Achievement, AchievementCriteria
 from app.models.lesson import CardContentType, Lesson, LessonCard
 from app.models.site import CoastlineSite, LayerType, SatelliteLayer
-from app.models.user import Team, TeamType, User, UserRole
+from app.models.user import AgeVerificationMethod, Team, TeamType, User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +65,27 @@ LESSONS = [
     },
 ]
 
+BASE_COURSE = {
+    "title": "Базовый курс волонтёра: ТБ и участие в уборках",
+    "slug": "bazovyi-kurs-volontera",
+    "summary": "Обязательный курс перед записью на уборку: техника безопасности, правила поведения на мероприятии и как проходит уборка территории.",
+    "cards": [
+        ("Техника безопасности", "На уборке работайте в перчатках, не поднимайте острые и тяжёлые предметы голыми руками, держитесь группы и следуйте указаниям организатора."),
+        ("Что взять с собой", "Перчатки, воду, головной убор и удобную обувь. Мешки для мусора и инвентарь обычно выдаёт организатор на месте."),
+        ("Как проходит уборка", "Соберитесь в точке сбора вовремя, получите инструктаж и зону работы, а после уборки не забудьте сделать гео-чекин в приложении — так засчитывается участие и начисляются баллы."),
+        ("Проверь себя", None, {"question": "Что нужно сделать после уборки, чтобы получить баллы?", "options": ["Ничего, баллы начислятся сами", "Сделать гео-чекин в приложении", "Написать письмо организатору"], "correct_index": 1}),
+    ],
+}
+
 ACHIEVEMENTS = [
-    {"code": "first_lesson", "title": "Первые шаги", "description": "Пройден первый урок", "icon": "📘", "criteria_type": AchievementCriteria.lessons_completed, "criteria_value": 1, "points_reward": 5},
-    {"code": "all_lessons", "title": "Эко-эрудит", "description": "Пройдены все обучающие модули", "icon": "🎓", "criteria_type": AchievementCriteria.lessons_completed, "criteria_value": 4, "points_reward": 20},
-    {"code": "first_event", "title": "Первая уборка", "description": "Отмечено участие в первом мероприятии", "icon": "🧹", "criteria_type": AchievementCriteria.events_attended, "criteria_value": 1, "points_reward": 15},
-    {"code": "five_events", "title": "Постоянный волонтёр", "description": "Отмечено участие в 5 мероприятиях", "icon": "🌊", "criteria_type": AchievementCriteria.events_attended, "criteria_value": 5, "points_reward": 40},
+    {"code": "first_lesson", "title": "Первые шаги", "description": "Пройден первый урок", "icon": "📘", "criteria_type": AchievementCriteria.lessons_completed, "criteria_value": 1, "points_reward": 5, "avatar_frame_code": "bronze"},
+    {"code": "all_lessons", "title": "Эко-эрудит", "description": "Пройдены все обучающие модули", "icon": "🎓", "criteria_type": AchievementCriteria.lessons_completed, "criteria_value": 4, "points_reward": 20, "avatar_frame_code": "silver"},
+    {"code": "first_event", "title": "Первая уборка", "description": "Отмечено участие в первом мероприятии", "icon": "🧹", "criteria_type": AchievementCriteria.events_attended, "criteria_value": 1, "points_reward": 15, "avatar_frame_code": "bronze"},
+    {"code": "five_events", "title": "Постоянный волонтёр", "description": "Отмечено участие в 5 мероприятиях", "icon": "🌊", "criteria_type": AchievementCriteria.events_attended, "criteria_value": 5, "points_reward": 40, "avatar_frame_code": "gold"},
     {"code": "first_report", "title": "Дозорный берега", "description": "Первый принятый репорт о мусоре", "icon": "📸", "criteria_type": AchievementCriteria.reports_approved, "criteria_value": 1, "points_reward": 10},
-    {"code": "points_100", "title": "Сотня добрых дел", "description": "Набрано 100 баллов", "icon": "⭐", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 100, "points_reward": 10},
-    {"code": "points_500", "title": "Хранитель берега", "description": "Набрано 500 баллов", "icon": "🏆", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 500, "points_reward": 25},
+    {"code": "points_100", "title": "Сотня добрых дел", "description": "Набрано 100 баллов", "icon": "⭐", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 100, "points_reward": 10, "avatar_frame_code": "silver"},
+    {"code": "points_500", "title": "Хранитель берега", "description": "Набрано 500 баллов", "icon": "🏆", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 500, "points_reward": 25, "avatar_frame_code": "emerald"},
+    {"code": "summer_activist", "title": "Летний активист", "description": "3 уборки за лето", "icon": "☀️", "criteria_type": AchievementCriteria.seasonal_events_attended, "criteria_value": 3, "points_reward": 20, "season": "summer"},
 ]
 
 
@@ -91,16 +104,17 @@ async def seed() -> None:
         await db.flush()
 
         admin = User(
-            email="admin@chistybereg.ru", password_hash=hash_password("admin12345"),
-            display_name="Администратор фонда", role=UserRole.admin,
+            username="admin", email="admin@chistybereg.ru", password_hash=hash_password("admin12345"),
+            display_name="Администратор фонда", role=UserRole.admin, email_verified=True,
         )
         organizer = User(
-            email="organizer@chistybereg.ru", password_hash=hash_password("organizer12345"),
-            display_name="Организатор эко-клуба", role=UserRole.organizer, team_id=team.id,
+            username="organizer", email="organizer@chistybereg.ru", password_hash=hash_password("organizer12345"),
+            display_name="Организатор эко-клуба", role=UserRole.organizer, team_id=team.id, email_verified=True,
         )
         volunteer = User(
-            email="volunteer@chistybereg.ru", password_hash=hash_password("volunteer12345"),
-            display_name="Волонтёр Аня", role=UserRole.volunteer, team_id=team.id,
+            username="volunteer", email="volunteer@chistybereg.ru", password_hash=hash_password("volunteer12345"),
+            display_name="Волонтёр Аня", role=UserRole.volunteer, team_id=team.id, email_verified=True,
+            age_verified=True, age_verification_method=AgeVerificationMethod.manual,
         )
         db.add_all([admin, organizer, volunteer])
         await db.flush()
@@ -143,6 +157,21 @@ async def seed() -> None:
                     content_type=CardContentType.quiz if quiz_data else CardContentType.text,
                     title=title, body=body or "", quiz_data=quiz_data,
                 ))
+
+        base_lesson = Lesson(
+            title=BASE_COURSE["title"], slug=BASE_COURSE["slug"], summary=BASE_COURSE["summary"],
+            order_index=len(LESSONS), points_reward=15, is_base_course=True,
+        )
+        db.add(base_lesson)
+        await db.flush()
+        for card_idx, card in enumerate(BASE_COURSE["cards"]):
+            title, body, *quiz = card
+            quiz_data = quiz[0] if quiz else None
+            db.add(LessonCard(
+                lesson_id=base_lesson.id, order_index=card_idx,
+                content_type=CardContentType.quiz if quiz_data else CardContentType.text,
+                title=title, body=body or "", quiz_data=quiz_data,
+            ))
 
         for a in ACHIEVEMENTS:
             db.add(Achievement(**a))

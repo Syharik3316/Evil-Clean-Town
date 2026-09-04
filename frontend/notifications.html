@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Уведомления — Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+  <div class="container">
+    <h1>Уведомления</h1>
+    <div style="margin-bottom:12px">
+      <button class="btn secondary" id="mark-all-read-btn">Отметить все прочитанными</button>
+    </div>
+    <div id="notifications-root" class="card">Загрузка…</div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/notifications.js"></script>
+  <script>
+    renderNav("notifications.html");
+    initNotificationsPage();
+  </script>
+</body>
+</html>

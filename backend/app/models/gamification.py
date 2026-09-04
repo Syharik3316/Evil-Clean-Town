@@ -13,6 +13,7 @@ class AchievementCriteria(str, enum.Enum):
     events_attended = "events_attended"
     reports_approved = "reports_approved"
     points_threshold = "points_threshold"
+    seasonal_events_attended = "seasonal_events_attended"
 
 
 class Achievement(Base):
@@ -26,6 +27,10 @@ class Achievement(Base):
     criteria_type: Mapped[AchievementCriteria] = mapped_column(Enum(AchievementCriteria), nullable=False)
     criteria_value: Mapped[int] = mapped_column(Integer, nullable=False)
     points_reward: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # для seasonal_events_attended: "winter" | "spring" | "summer" | "autumn"
+    season: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # код рамки аватара, которую открывает эта ачивка (см. frame-* классы в css/style.css)
+    avatar_frame_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class UserAchievement(Base):

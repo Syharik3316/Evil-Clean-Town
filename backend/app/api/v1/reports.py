@@ -12,6 +12,7 @@ from app.models.report import ReportStatus, TrashReport
 from app.models.user import User
 from app.schemas.report import ModerationRequest, TrashReportOut
 from app.services.gamification import award_points, check_achievements
+from app.services.notifications import notify
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -24,6 +25,8 @@ async def submit_report(
     lon: float = Form(...),
     description: str | None = Form(None),
     site_id: int | None = Form(None),
+    event_id: int | None = Form(None),
+    region: str | None = Form(None),
     photo: UploadFile = File(...),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -45,8 +48,10 @@ async def submit_report(
     report = TrashReport(
         user_id=user.id,
         site_id=site_id,
+        event_id=event_id,
         photo_url=f"/uploads/reports/{filename}",
         description=description,
+        region=region,
         lat=lat,
         lon=lon,
     )
@@ -60,6 +65,8 @@ async def submit_report(
 async def list_reports(
     mine_only: bool = Query(False),
     status_filter: ReportStatus | None = Query(None),
+    sort_by: str = Query("created_at", pattern="^(created_at|region)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -68,7 +75,8 @@ async def list_reports(
         stmt = stmt.where(TrashReport.user_id == user.id)
     if status_filter is not None:
         stmt = stmt.where(TrashReport.status == status_filter)
-    stmt = stmt.order_by(TrashReport.created_at.desc())
+    sort_column = TrashReport.region if sort_by == "region" else TrashReport.created_at
+    stmt = stmt.order_by(sort_column.asc() if order == "asc" else sort_column.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -98,14 +106,25 @@ async def moderate_report(
     report.moderator_id = moderator.id
     report.moderated_at = utcnow()
 
+    author = await db.get(User, report.user_id)
     if payload.approve:
-        author = await db.get(User, report.user_id)
         if author is not None:
             await award_points(
                 db, author, report.points_reward, reason="Репорт о мусоре принят",
                 related_entity_type="report", related_entity_id=report.id,
             )
             await check_achievements(db, author)
+        if author is not None:
+            await notify(
+                db, author.id, type="report_approved", title="Ваш репорт о мусоре принят",
+                body=payload.comment, related_entity_type="report", related_entity_id=report.id,
+            )
+    else:
+        if author is not None:
+            await notify(
+                db, author.id, type="report_rejected", title="Ваш репорт о мусоре отклонён",
+                body=payload.comment, related_entity_type="report", related_entity_id=report.id,
+            )
 
     await db.commit()
     await db.refresh(report)

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Тикеты — Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+  <div class="container">
+    <h1>Тикеты</h1>
+    <p class="lead">Модерация репортов о мусоре и предложенных мероприятий.</p>
+
+    <div style="display:flex; gap:8px; margin-bottom:14px">
+      <button class="btn" data-tab="reports">Репорты</button>
+      <button class="btn secondary" data-tab="events">Мероприятия</button>
+      <button class="btn secondary" data-tab="courses">Курсы</button>
+    </div>
+
+    <div id="ticket-root">Загрузка…</div>
+  </div>
+
+  <div class="modal-backdrop" id="reason-modal" hidden>
+    <div class="modal">
+      <h2>Причина отклонения</h2>
+      <form id="reason-form">
+        <div class="field"><label for="reason-text">Причина</label><textarea id="reason-text" rows="3" required></textarea></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn danger" type="submit">Отклонить</button>
+          <button class="btn secondary" type="button" id="reason-cancel">Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="edit-event-modal" hidden>
+    <div class="modal">
+      <h2>Редактировать перед публикацией</h2>
+      <form id="edit-event-form">
+        <div class="field"><label for="edit-title">Название</label><input type="text" id="edit-title" required /></div>
+        <div class="field"><label for="edit-description">Описание</label><textarea id="edit-description" rows="3" required></textarea></div>
+        <div class="field" id="edit-address-field"><label for="edit-address">Адрес</label><input type="text" id="edit-address" /></div>
+        <div class="field" id="edit-region-field"><label for="edit-region">Регион</label><input type="text" id="edit-region" /></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" type="submit">Сохранить и опубликовать</button>
+          <button class="btn secondary" type="button" id="edit-event-cancel">Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/tickets.js"></script>
+  <script>
+    renderNav("tickets.html");
+    initTicketsPage();
+  </script>
+</body>
+</html>

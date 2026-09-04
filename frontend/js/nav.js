@@ -14,6 +14,7 @@ async function renderNav(activePage) {
     ["lessons.html", "Уроки"],
     ["events.html", "Мероприятия"],
     ["reports.html", "Репорты"],
+    ["leaderboard.html", "Лидерборд"],
   ];
 
   let user = null;
@@ -30,12 +31,18 @@ async function renderNav(activePage) {
 
   let authHtml;
   if (user) {
-    const adminLink =
-      user.role === "admin" || user.role === "organizer"
-        ? `<a class="nav-link${activePage === "admin.html" ? " active" : ""}" href="admin.html">Админ</a>`
-        : "";
+    let roleLink = "";
+    if (user.role === "admin") {
+      roleLink = `
+        <a class="nav-link${activePage === "tickets.html" ? " active" : ""}" href="tickets.html">Тикеты</a>
+        <a class="nav-link${activePage === "admin.html" ? " active" : ""}" href="admin.html">Статистика</a>
+      `;
+    } else if (user.role === "organizer") {
+      roleLink = `<a class="nav-link${activePage === "organizer.html" ? " active" : ""}" href="organizer.html">Мои мероприятия</a>`;
+    }
     authHtml = `
-      ${adminLink}
+      ${roleLink}
+      <a class="nav-link${activePage === "notifications.html" ? " active" : ""}" href="notifications.html" id="nav-bell">🔔<span id="nav-unread-badge" hidden></span></a>
       <a class="nav-link${activePage === "profile.html" ? " active" : ""}" href="profile.html">${escapeHtml(user.display_name)}</a>
       <span class="points-pill">${Math.round(user.points_total)} б.</span>
       <a class="nav-link" href="#" id="nav-logout">Выйти</a>
@@ -62,5 +69,18 @@ async function renderNav(activePage) {
       clearTokens();
       window.location.href = "index.html";
     });
+  }
+
+  if (user) {
+    try {
+      const { count } = await api.get("/notifications/unread-count");
+      const badge = document.getElementById("nav-unread-badge");
+      if (badge && count > 0) {
+        badge.hidden = false;
+        badge.textContent = ` ${count}`;
+      }
+    } catch (e) {
+      /* тихо игнорируем — колокольчик просто без счётчика */
+    }
   }
 }

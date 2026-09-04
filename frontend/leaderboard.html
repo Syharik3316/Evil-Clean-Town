@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Лидерборд — Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+  <div class="container">
+    <h1>Лидерборд</h1>
+    <p class="lead">Рейтинг участников и организаций «Чистого берега».</p>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
+      <button class="btn" data-scope="users">Участники</button>
+      <button class="btn secondary" data-scope="organizations">Организации</button>
+      <button class="btn secondary" data-scope="teams">Команды/школы</button>
+    </div>
+    <div class="field" style="max-width:260px">
+      <label for="region-filter">Регион</label>
+      <input type="text" id="region-filter" placeholder="Например, Краснодарский край" />
+    </div>
+
+    <div id="leaderboard-root" class="card">Загрузка…</div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script>
+    renderNav("leaderboard.html");
+    initLeaderboardPage();
+  </script>
+</body>
+</html>

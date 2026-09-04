@@ -170,6 +170,27 @@ table th, table td { text-align: left; padding: 8px; border-bottom: 1px solid va
 .progress-bar { background: var(--border); border-radius: 999px; height: 8px; overflow: hidden; }
 .progress-bar > div { background: var(--primary); height: 100%; }
 
+.frame-none { border: 2px solid transparent; }
+.frame-bronze { border: 3px solid #b08d57; box-shadow: 0 0 0 2px #f0e0c8; }
+.frame-silver { border: 3px solid #b9c2c9; box-shadow: 0 0 0 2px #eef1f3; }
+.frame-gold { border: 3px solid #e0b23a; box-shadow: 0 0 0 2px #fbeec2; }
+.frame-emerald { border: 3px solid var(--primary); box-shadow: 0 0 0 2px #cdeee2; }
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 40, 33, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: var(--surface); border-radius: var(--radius); padding: 20px;
+  max-width: 420px; width: 100%; box-shadow: var(--shadow);
+}
+.modal h2 { margin-top: 0; }
+
+.notification-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+.notification-item:last-child { border-bottom: none; }
+.notification-item.unread { background: #f4faf8; }
+
 @media (max-width: 600px) {
   h1 { font-size: 1.35rem; }
   .hero { padding: 20px 16px; }

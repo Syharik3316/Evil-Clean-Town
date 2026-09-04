@@ -1,0 +1,137 @@
+{
+  "title": "Активность пользователей — Чистый берег",
+  "uid": "chistybereg-activity",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-90d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Всего пользователей",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM users",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Опубликованных мероприятий",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM events WHERE status = 'published'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Тикетов на рассмотрении (мероприятия)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM events WHERE status = 'pending_review'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Репортов на модерации",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM trash_reports WHERE status = 'pending'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Регистрации пользователей по дням",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), count(*) AS \"Регистрации\" FROM users WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Входы по дням",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), count(*) AS \"Входы\" FROM login_events WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Прохождения курсов по дням",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroupAlias(completed_at,'1d'), count(*) AS \"Курсы пройдены\" FROM user_lesson_progress WHERE $__timeFilter(completed_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Подтверждённое участие в мероприятиях (чек-ины) по дням",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroupAlias(checkin_at,'1d'), count(*) AS \"Чек-ины\" FROM event_registrations WHERE status = 'checked_in' AND $__timeFilter(checkin_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Начисленные баллы по дням",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), sum(amount) AS \"Баллы\" FROM points_ledger WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

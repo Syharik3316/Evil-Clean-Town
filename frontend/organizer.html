@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Мои мероприятия — Чистый берег</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav"><div id="app-nav"></div></nav>
+  <div class="container">
+    <h1>Мои мероприятия</h1>
+    <p class="lead">Управляйте своими мероприятиями: смотрите заявки, опыт волонтёров, назначайте роли и бонусные баллы.</p>
+    <div id="organizer-root">Загрузка…</div>
+  </div>
+
+  <div class="modal-backdrop" id="reject-modal" hidden>
+    <div class="modal">
+      <h2>Причина отказа</h2>
+      <form id="reject-form">
+        <div class="field"><label for="reject-reason">Причина</label><textarea id="reject-reason" rows="3" required></textarea></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn danger" type="submit">Отклонить заявку</button>
+          <button class="btn secondary" type="button" id="reject-cancel">Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/organizer.js"></script>
+  <script>
+    renderNav("organizer.html");
+    initOrganizerPage();
+  </script>
+</body>
+</html>

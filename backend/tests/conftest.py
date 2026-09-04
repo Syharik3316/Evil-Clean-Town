@@ -41,6 +41,21 @@ def _configure_upload_dir(tmp_path_factory):
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
 
+sent_verification_codes: dict[str, str] = {}
+
+
+async def _capture_send_verification_code(to_email: str, code: str) -> None:
+    sent_verification_codes[to_email] = code
+
+
+@pytest_asyncio.fixture(autouse=True)
+def _patch_email_sending(monkeypatch):
+    sent_verification_codes.clear()
+    import app.services.verification as verification_module
+
+    monkeypatch.setattr(verification_module, "send_verification_code", _capture_send_verification_code)
+
+
 @pytest_asyncio.fixture
 async def client():
     from app.main import app

@@ -22,6 +22,26 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="manual-verify-modal" hidden>
+    <div class="modal">
+      <h2>Ручная верификация</h2>
+      <p class="muted">Введите паспортные данные для подтверждения возраста (демо-режим: подтверждение выполняется сразу после отправки).</p>
+      <div id="manual-verify-alert"></div>
+      <form id="manual-verify-form">
+        <div class="field"><label for="mv-full-name">ФИО</label><input type="text" id="mv-full-name" required /></div>
+        <div class="field"><label for="mv-birth-date">Дата рождения</label><input type="date" id="mv-birth-date" required /></div>
+        <div class="field"><label for="mv-passport-series">Серия паспорта</label><input type="text" id="mv-passport-series" required /></div>
+        <div class="field"><label for="mv-passport-number">Номер паспорта</label><input type="text" id="mv-passport-number" required /></div>
+        <div class="field"><label for="mv-issued-by">Кем выдан</label><input type="text" id="mv-issued-by" required /></div>
+        <div class="field"><label for="mv-issued-date">Дата выдачи</label><input type="date" id="mv-issued-date" required /></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" type="submit">Отправить</button>
+          <button class="btn secondary" type="button" id="manual-verify-cancel">Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="js/api.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/profile.js"></script>

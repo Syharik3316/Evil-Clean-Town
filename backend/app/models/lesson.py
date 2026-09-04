@@ -14,6 +14,13 @@ class CardContentType(str, enum.Enum):
     quiz = "quiz"
 
 
+class LessonStatus(str, enum.Enum):
+    draft = "draft"
+    pending_review = "pending_review"
+    published = "published"
+    rejected = "rejected"
+
+
 class Lesson(TimestampMixin, Base):
     __tablename__ = "lessons"
 
@@ -22,8 +29,10 @@ class Lesson(TimestampMixin, Base):
     slug: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    status: Mapped[LessonStatus] = mapped_column(Enum(LessonStatus), default=LessonStatus.published, nullable=False)
+    is_base_course: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     points_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     cards: Mapped[list["LessonCard"]] = relationship(
         back_populates="lesson", order_by="LessonCard.order_index", cascade="all, delete-orphan"
