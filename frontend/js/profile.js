@@ -12,7 +12,7 @@ async function initProfilePage() {
   profileUser = await currentUser(true);
   if (!profileUser) return;
 
-  if (profileUser.role === "organizer") renderOrganizerProfile(profileUser);
+  if (profileUser.role === "organizer") await renderOrganizerProfile(profileUser);
   else if (profileUser.role === "admin") renderAdminProfile(profileUser);
   else await renderVolunteerProfile(profileUser);
 }
@@ -608,9 +608,17 @@ async function loadProfileBoard(scope) {
 
 /* --------------------------------------------------------- организатор --- */
 
-function renderOrganizerProfile(user) {
+async function renderOrganizerProfile(user) {
   const org = user.organization;
   const orgApproved = !org || org.status === "approved";
+
+  const [earned, allAchievements] = await Promise.all([
+    api.get("/users/me/achievements").catch(() => []),
+    api.get("/achievements").catch(() => []),
+  ]);
+  const orgAchievements = allAchievements.filter((a) => a.audience === "organizer");
+  const earnedCodes = new Set(earned.map((a) => a.achievement.code));
+
   document.getElementById("profile-root").innerHTML = `
     <div class="profile-head">
       ${avatarBox(user)}
@@ -628,6 +636,8 @@ function renderOrganizerProfile(user) {
       </div>
       <div class="profile-stats">
         <div class="profile-stat"><span class="v">${org ? Math.round(org.points_total) : 0}</span><div class="k">баллов организации</div></div>
+        <div class="profile-stat"><span class="v">${Math.round(user.points_total)}</span><div class="k">личных баллов</div></div>
+        <div class="profile-stat"><span class="v">${earned.length}</span><div class="k">ачивок</div></div>
       </div>
     </div>
 
@@ -652,6 +662,29 @@ function renderOrganizerProfile(user) {
         ${orgApproved ? '<a href="/lessons" style="font-size:12.5px">Перейти →</a>' : '<span class="muted" style="font-size:12px">Недоступно до подтверждения</span>'}
       </div>
       ${quickCell("ph-duotone ph-camera", "Репорты", "Просмотр очереди находок волонтёров (модерация — у администрации).", "/reports")}
+    </div>
+
+    <div style="border-top:1px solid var(--color-divider);margin-top:40px;padding-top:32px">
+      <h3>Ачивки организатора</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 18px">Получено ${earned.length} из ${orgAchievements.length || earned.length}. Создавайте мероприятия и курсы, набирайте волонтёров — открывайте новые значки.</p>
+      <div class="ach-grid">
+        ${(orgAchievements.length ? orgAchievements : earned.map((e) => e.achievement))
+          .map((a) => {
+            const got = earnedCodes.has(a.code);
+            const badge = a.image_url
+              ? `<img src="${a.image_url}" alt="" style="width:100%;height:100%;object-fit:contain" />`
+              : escapeHtml(a.icon || "★");
+            return `
+            <div class="ach${got ? " got" : ""}">
+              ${got ? '<i class="ph-duotone ph-check-circle check"></i>' : ""}
+              <div class="badge-round">${badge}</div>
+              <div class="t">${escapeHtml(a.title)}</div>
+              <div class="d">${escapeHtml(a.description)}</div>
+              <div class="s">${got ? "получена" : `+${a.points_reward} б. за получение`}</div>
+            </div>`;
+          })
+          .join("")}
+      </div>
     </div>
 
     ${

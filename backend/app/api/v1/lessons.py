@@ -129,6 +129,7 @@ async def create_lesson(
     status_value = LessonStatus.published if user.role == UserRole.admin else LessonStatus.draft
     lesson = Lesson(**payload.model_dump(), created_by_id=user.id, status=status_value)
     db.add(lesson)
+    await check_achievements(db, user)
     await db.commit()
     await db.refresh(lesson)
     return lesson
@@ -244,6 +245,11 @@ async def complete_lesson(
         db, user.id, type="course_completed", title=f"Вы прошли курс «{lesson.title}»",
         related_entity_type="lesson", related_entity_id=lesson.id,
     )
+
+    if lesson.created_by_id is not None:
+        organizer = await db.get(User, lesson.created_by_id)
+        if organizer is not None:
+            await check_achievements(db, organizer)
 
     await db.commit()
 

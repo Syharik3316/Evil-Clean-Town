@@ -2,13 +2,18 @@ from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event, EventRegistration, RegistrationStatus
-from app.models.gamification import Achievement, AchievementCriteria, PointsLedger, UserAchievement
+from app.models.gamification import Achievement, AchievementAudience, AchievementCriteria, PointsLedger, UserAchievement
 from app.models.lesson import Lesson, UserLessonProgress
 from app.models.mixins import ensure_aware, utcnow
 from app.models.report import ReportStatus, TrashReport
-from app.models.user import Organization, User
+from app.models.user import Organization, User, UserRole
 
 MAX_ACHIEVEMENT_PASSES = 5
+
+AUDIENCE_BY_ROLE = {
+    UserRole.volunteer: AchievementAudience.volunteer,
+    UserRole.organizer: AchievementAudience.organizer,
+}
 
 SEASON_MONTHS = {
     "winter": (12, 1, 2),
@@ -109,6 +114,18 @@ async def _criteria_progress(db: AsyncSession, user: User, achievement: Achievem
     if criteria_type == AchievementCriteria.points_threshold:
         return user.points_total
 
+    if criteria_type == AchievementCriteria.event_volunteers_registered:
+        # максимум заявок (кроме отклонённых) на одном мероприятии этого организатора
+        per_event_counts = (
+            select(EventRegistration.event_id, func.count().label("cnt"))
+            .join(Event, Event.id == EventRegistration.event_id)
+            .where(Event.organizer_id == user.id, EventRegistration.status != RegistrationStatus.rejected)
+            .group_by(EventRegistration.event_id)
+            .subquery()
+        )
+        result = await db.execute(select(func.max(per_event_counts.c.cnt)))
+        return result.scalar_one_or_none() or 0
+
     if criteria_type == AchievementCriteria.lessons_completed:
         stmt = select(func.count()).select_from(UserLessonProgress).where(UserLessonProgress.user_id == user.id)
     elif criteria_type == AchievementCriteria.events_attended:
@@ -139,6 +156,25 @@ async def _criteria_progress(db: AsyncSession, user: User, achievement: Achievem
                 extract("month", EventRegistration.checkin_at).in_(months),
             )
         )
+    elif criteria_type == AchievementCriteria.events_created:
+        stmt = select(func.count()).select_from(Event).where(Event.organizer_id == user.id)
+    elif criteria_type == AchievementCriteria.events_completed:
+        # мероприятие «проведено», если хотя бы один волонтёр отметился на нём чекином
+        stmt = (
+            select(func.count(func.distinct(Event.id)))
+            .select_from(Event)
+            .join(EventRegistration, EventRegistration.event_id == Event.id)
+            .where(Event.organizer_id == user.id, EventRegistration.status == RegistrationStatus.checked_in)
+        )
+    elif criteria_type == AchievementCriteria.courses_created:
+        stmt = select(func.count()).select_from(Lesson).where(Lesson.created_by_id == user.id)
+    elif criteria_type == AchievementCriteria.course_completions:
+        stmt = (
+            select(func.count())
+            .select_from(UserLessonProgress)
+            .join(Lesson, Lesson.id == UserLessonProgress.lesson_id)
+            .where(Lesson.created_by_id == user.id)
+        )
     else:
         return 0
 
@@ -148,6 +184,10 @@ async def _criteria_progress(db: AsyncSession, user: User, achievement: Achievem
 
 async def check_achievements(db: AsyncSession, user: User) -> list[str]:
     """Grants any newly-earned achievements. Returns titles of newly granted achievements."""
+    target_audience = AUDIENCE_BY_ROLE.get(user.role)
+    if target_audience is None:
+        return []
+
     newly_granted: list[str] = []
 
     for _ in range(MAX_ACHIEVEMENT_PASSES):
@@ -156,7 +196,9 @@ async def check_achievements(db: AsyncSession, user: User) -> list[str]:
         )
         earned_ids = set(earned_ids_result.scalars().all())
 
-        all_achievements_result = await db.execute(select(Achievement))
+        all_achievements_result = await db.execute(
+            select(Achievement).where(Achievement.audience == target_audience)
+        )
         candidates = [a for a in all_achievements_result.scalars().all() if a.id not in earned_ids]
         if not candidates:
             break

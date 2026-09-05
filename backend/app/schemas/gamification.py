@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.gamification import AchievementCriteria
+from app.models.gamification import AchievementAudience, AchievementCriteria
 
 
 class AchievementOut(BaseModel):
@@ -14,6 +14,7 @@ class AchievementOut(BaseModel):
     description: str
     icon: str
     image_url: str | None
+    audience: AchievementAudience
     criteria_type: AchievementCriteria
     criteria_value: int
     points_reward: int
@@ -27,6 +28,7 @@ class AchievementCreate(BaseModel):
     title: str
     description: str
     icon: str = "🏅"
+    audience: AchievementAudience = AchievementAudience.volunteer
     criteria_type: AchievementCriteria
     criteria_value: int
     points_reward: int = 0
@@ -38,6 +40,7 @@ class AchievementUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     icon: str | None = None
+    audience: AchievementAudience | None = None
     criteria_type: AchievementCriteria | None = None
     criteria_value: int | None = None
     points_reward: int | None = None

@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.db.seed_images import generate_pair
 from app.db.session import AsyncSessionLocal
-from app.models.gamification import Achievement, AchievementCriteria
+from app.models.gamification import Achievement, AchievementAudience, AchievementCriteria
 from app.models.lesson import CardContentType, Lesson, LessonCard
 from app.models.site import CoastlineSite, LayerType, SatelliteLayer
 
@@ -90,6 +90,17 @@ ACHIEVEMENTS = [
     {"code": "points_100", "title": "Сотня добрых дел", "description": "Набрано 100 баллов", "icon": "⭐", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 100, "points_reward": 10, "avatar_frame_code": "silver"},
     {"code": "points_500", "title": "Хранитель берега", "description": "Набрано 500 баллов", "icon": "🏆", "criteria_type": AchievementCriteria.points_threshold, "criteria_value": 500, "points_reward": 25, "avatar_frame_code": "emerald"},
     {"code": "summer_activist", "title": "Летний активист", "description": "3 уборки за лето", "icon": "☀️", "criteria_type": AchievementCriteria.seasonal_events_attended, "criteria_value": 3, "points_reward": 20, "season": "summer"},
+    # ачивки организаторов — мотивация создавать мероприятия и курсы, а не только волонтёрить
+    {"code": "org_first_event", "title": "Организатор дебютировал", "description": "Создано первое мероприятие", "icon": "🚩", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.events_created, "criteria_value": 1, "points_reward": 10},
+    {"code": "org_ten_events", "title": "Серийный организатор", "description": "Создано 10 мероприятий", "icon": "🗓️", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.events_created, "criteria_value": 10, "points_reward": 40},
+    {"code": "org_first_completed", "title": "Мероприятие состоялось", "description": "Проведено первое мероприятие — хотя бы один волонтёр отметился чекином", "icon": "✅", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.events_completed, "criteria_value": 1, "points_reward": 15},
+    {"code": "org_ten_completed", "title": "Опытный организатор", "description": "Проведено 10 мероприятий с волонтёрами", "icon": "🏅", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.events_completed, "criteria_value": 10, "points_reward": 60},
+    {"code": "org_ten_volunteers", "title": "Полный зал", "description": "На одно мероприятие записалось 10 волонтёров", "icon": "👥", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.event_volunteers_registered, "criteria_value": 10, "points_reward": 30},
+    {"code": "org_fifty_volunteers", "title": "Массовое мероприятие", "description": "На одно мероприятие записалось 50 волонтёров", "icon": "🎉", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.event_volunteers_registered, "criteria_value": 50, "points_reward": 80},
+    {"code": "org_first_course", "title": "Первый курс", "description": "Создан первый обучающий курс", "icon": "📗", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.courses_created, "criteria_value": 1, "points_reward": 15},
+    {"code": "org_five_courses", "title": "Автор программы", "description": "Создано 5 обучающих курсов", "icon": "📚", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.courses_created, "criteria_value": 5, "points_reward": 50},
+    {"code": "org_ten_course_completions", "title": "Курс заходит", "description": "Ваши курсы прошли 10 волонтёров", "icon": "🎯", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.course_completions, "criteria_value": 10, "points_reward": 30},
+    {"code": "org_hundred_course_completions", "title": "Просветитель", "description": "Ваши курсы прошли 100 волонтёров", "icon": "🌟", "audience": AchievementAudience.organizer, "criteria_type": AchievementCriteria.course_completions, "criteria_value": 100, "points_reward": 100},
 ]
 
 

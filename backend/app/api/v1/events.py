@@ -128,6 +128,7 @@ async def create_event(
     await db.flush()
     for role in payload.roles:
         db.add(EventRole(event_id=event.id, **role.model_dump()))
+    await check_achievements(db, user)
     await db.commit()
     await db.refresh(event)
     return event
@@ -299,6 +300,9 @@ async def register_for_event(
         db, user.id, type="registration_submitted", title=f"Вы отправили заявку на «{event.title}»",
         related_entity_type="event", related_entity_id=event.id,
     )
+    organizer = await db.get(User, event.organizer_id)
+    if organizer is not None:
+        await check_achievements(db, organizer)
     await db.commit()
     await db.refresh(registration)
     return registration
@@ -355,6 +359,10 @@ async def checkin(
     await db.flush()
     await update_streak(db, user)
     await check_achievements(db, user)
+
+    organizer = await db.get(User, event.organizer_id)
+    if organizer is not None:
+        await check_achievements(db, organizer)
 
     await db.commit()
     await db.refresh(registration)

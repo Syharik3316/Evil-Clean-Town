@@ -14,7 +14,14 @@ const CRITERIA_LABELS = {
   reports_approved: "Принято репортов",
   points_threshold: "Набрано баллов",
   seasonal_events_attended: "Уборок за сезон",
+  events_created: "Создано мероприятий",
+  events_completed: "Проведено мероприятий (с чекинами)",
+  event_volunteers_registered: "Волонтёров на одном мероприятии",
+  courses_created: "Создано курсов",
+  course_completions: "Волонтёров прошло ваши курсы",
 };
+
+const AUDIENCE_LABELS = { volunteer: "Волонтёру", organizer: "Организатору" };
 
 async function initAdminPage() {
   const root = document.getElementById("admin-root");
@@ -320,7 +327,10 @@ function achievementCardHtml(a) {
       <div style="display:flex;align-items:center;gap:10px">
         ${visual}
         <div style="flex:1">
-          <strong style="font-family:var(--font-heading);font-weight:600">${escapeHtml(a.title)}</strong>
+          <div style="display:flex;align-items:center;gap:8px">
+            <strong style="font-family:var(--font-heading);font-weight:600">${escapeHtml(a.title)}</strong>
+            <span class="tag ${a.audience === "organizer" ? "tag-accent-2" : "tag-neutral"}" style="font-size:10.5px">${AUDIENCE_LABELS[a.audience] || a.audience}</span>
+          </div>
           <p class="muted" style="margin:2px 0;font-size:13px">${escapeHtml(a.description)}</p>
           <p class="muted" style="margin:0;font-size:11.5px">${CRITERIA_LABELS[a.criteria_type] || a.criteria_type} ≥ ${a.criteria_value} · +${a.points_reward} баллов${a.season ? ` · сезон: ${escapeHtml(a.season)}` : ""}</p>
         </div>
@@ -395,6 +405,12 @@ function renderAchievementForm() {
       <div class="field"><label for="af-description">Описание / как получить</label><textarea class="input" id="af-description" rows="2" required></textarea></div>
       <div class="field"><label for="af-icon">Эмодзи-иконка (пока нет картинки)</label><input class="input" type="text" id="af-icon" value="🏅" maxlength="4" /></div>
       <div class="field">
+        <label for="af-audience">Кому адресована</label>
+        <select class="input" id="af-audience">
+          ${Object.entries(AUDIENCE_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
         <label for="af-criteria-type">Условие получения</label>
         <select class="input" id="af-criteria-type">
           ${Object.entries(CRITERIA_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
@@ -425,6 +441,7 @@ function renderAchievementForm() {
         title: document.getElementById("af-title").value.trim(),
         description: document.getElementById("af-description").value.trim(),
         icon: document.getElementById("af-icon").value.trim() || "🏅",
+        audience: document.getElementById("af-audience").value,
         criteria_type: document.getElementById("af-criteria-type").value,
         criteria_value: parseInt(document.getElementById("af-criteria-value").value, 10),
         points_reward: parseInt(document.getElementById("af-points").value, 10) || 0,

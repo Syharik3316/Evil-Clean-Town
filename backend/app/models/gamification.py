@@ -14,6 +14,17 @@ class AchievementCriteria(str, enum.Enum):
     reports_approved = "reports_approved"
     points_threshold = "points_threshold"
     seasonal_events_attended = "seasonal_events_attended"
+    # ачивки для организаторов — считаются по мероприятиям/курсам, которые создал сам организатор
+    events_created = "events_created"
+    events_completed = "events_completed"
+    event_volunteers_registered = "event_volunteers_registered"
+    courses_created = "courses_created"
+    course_completions = "course_completions"
+
+
+class AchievementAudience(str, enum.Enum):
+    volunteer = "volunteer"
+    organizer = "organizer"
 
 
 class Achievement(Base):
@@ -26,6 +37,10 @@ class Achievement(Base):
     icon: Mapped[str] = mapped_column(String(10), default="🏅", nullable=False)
     # кастомное изображение значка ачивки (загружается админом), приоритетнее icon при наличии
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # кому адресована ачивка: волонтёру или организатору (см. AchievementCriteria выше)
+    audience: Mapped[AchievementAudience] = mapped_column(
+        Enum(AchievementAudience), default=AchievementAudience.volunteer, nullable=False
+    )
     criteria_type: Mapped[AchievementCriteria] = mapped_column(Enum(AchievementCriteria), nullable=False)
     criteria_value: Mapped[int] = mapped_column(Integer, nullable=False)
     points_reward: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
