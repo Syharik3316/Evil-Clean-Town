@@ -1,5 +1,16 @@
 apiVersion: 1
 
+# Grafana сверяет provisioned-датасорсы по name, а не по uid — переименование
+# "PostgreSQL (Чистый берег)" -> "PostgreSQL (GoodWill)" при том же uid означало,
+# что старая запись (уже осевшая в grafana.db на проде) не находится по новому
+# имени, и Grafana пытается СОЗДАТЬ новую — падая на конфликте uid ("data source
+# with the same uid already exists") и уходя в рестарт-луп. deleteDatasources
+# ниже удаляет старую запись по имени перед тем, как datasources ниже заведёт
+# новую — безопасно и идемпотентно (на чистой установке просто no-op).
+deleteDatasources:
+  - name: PostgreSQL (Чистый берег)
+    orgId: 1
+
 datasources:
   - name: PostgreSQL (GoodWill)
     uid: chistybereg-postgres
