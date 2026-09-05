@@ -1,5 +1,6 @@
 import logging
 from email.message import EmailMessage
+from pathlib import Path
 
 import aiosmtplib
 
@@ -7,19 +8,28 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-PRIMARY = "#0f8b6c"
-PRIMARY_DARK = "#0b6b53"
-TEXT = "#16241f"
-TEXT_MUTED = "#5c6b66"
-BG = "#f4f8f7"
+# Палитра и радиусы — из дизайн-системы Broadsheet фронтенда (frontend/css/style.css:
+# --color-accent-900/--color-accent-700/--color-accent-100/--color-bg/--color-neutral-700,
+# --radius-sm/--radius-md), чтобы письмо выглядело частью того же продукта, что и сайт.
+HEADER_BG = "#0a303e"  # --color-accent-900, цвет шапки сайта (.topbar)
+PRIMARY_DARK = "#006786"  # --color-accent-700
+CODE_BG = "#e9f8ff"  # --color-accent-100
+TEXT = "#201e1d"  # --color-text
+TEXT_MUTED = "#605d5d"  # --color-neutral-700
+BG = "#f3f2f2"  # --color-bg
 SURFACE = "#ffffff"
-BORDER = "#dbe6e2"
+BORDER = "#dcdad9"  # приближение --color-divider для непрозрачного email-фона
+FONT_STACK = "'Source Serif 4', Georgia, 'Times New Roman', serif"  # --font-body/--font-heading
+
+LOGO_PATH = Path(__file__).resolve().parent.parent / "static" / "email-logo.png"
+LOGO_CID = "goodwill-logo"
 
 
 def _logo_html() -> str:
-    if not settings.public_base_url:
-        return f'<div style="font-size:22px;font-weight:700;color:{PRIMARY_DARK}">GoodWill</div>'
-    return f'<img src="{settings.public_base_url}/logo.png" alt="GoodWill" height="36" style="display:block;height:36px;width:auto" />'
+    # Логотип всегда встраивается в письмо как inline-вложение (Content-ID) в _send(),
+    # поэтому не зависит от PUBLIC_BASE_URL/доступности сайта — почтовый клиент показывает
+    # картинку сразу, без подгрузки внешнего изображения.
+    return f'<img src="cid:{LOGO_CID}" alt="GoodWill" height="40" style="display:block;height:40px;width:auto" />'
 
 
 def _wrap_email_html(preheader: str, title: str, body_html: str) -> str:
@@ -29,14 +39,14 @@ def _wrap_email_html(preheader: str, title: str, body_html: str) -> str:
     return f"""<!doctype html>
 <html lang="ru">
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
-<body style="margin:0;padding:0;background:{BG};font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:{TEXT}">
+<body style="margin:0;padding:0;background:{BG};font-family:{FONT_STACK};color:{TEXT}">
   <span style="display:none;max-height:0;overflow:hidden;opacity:0">{preheader}</span>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{BG};padding:32px 16px">
     <tr><td align="center">
-      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:{SURFACE};border-radius:12px;overflow:hidden;border:1px solid {BORDER}">
-        <tr><td style="padding:24px 32px;border-bottom:1px solid {BORDER}">{_logo_html()}</td></tr>
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:{SURFACE};border-radius:2px;overflow:hidden;border:1px solid {BORDER}">
+        <tr><td style="padding:22px 32px;background:{HEADER_BG}">{_logo_html()}</td></tr>
         <tr><td style="padding:32px">
-          <h1 style="margin:0 0 16px;font-size:20px;color:{TEXT}">{title}</h1>
+          <h1 style="margin:0 0 16px;font-size:21px;font-weight:600;letter-spacing:-.015em;color:{TEXT};font-family:{FONT_STACK}">{title}</h1>
           {body_html}
         </td></tr>
         <tr><td style="padding:20px 32px;background:{BG};border-top:1px solid {BORDER}">
@@ -66,6 +76,11 @@ async def _send(to_email: str, subject: str, text_body: str, html_body: str) -> 
     message.set_content(text_body)
     message.add_alternative(html_body, subtype="html")
 
+    if LOGO_PATH.exists():
+        html_part = message.get_body(preferencelist=("html",))
+        if html_part is not None:
+            html_part.add_related(LOGO_PATH.read_bytes(), maintype="image", subtype="png", cid=f"<{LOGO_CID}>")
+
     await aiosmtplib.send(
         message,
         hostname=settings.smtp_host,
@@ -87,8 +102,8 @@ async def send_verification_code(to_email: str, code: str) -> None:
       <p style="margin:0 0 20px;font-size:14px;color:{TEXT_MUTED};line-height:1.5">
         Используйте этот код, чтобы подтвердить свою почту на GoodWill:
       </p>
-      <div style="margin:0 0 20px;padding:18px 0;text-align:center;background:{BG};border-radius:8px">
-        <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:{PRIMARY_DARK}">{code}</span>
+      <div style="margin:0 0 20px;padding:18px 0;text-align:center;background:{CODE_BG};border-radius:1px">
+        <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:{PRIMARY_DARK};font-family:{FONT_STACK}">{code}</span>
       </div>
       <p style="margin:0;font-size:13px;color:{TEXT_MUTED};line-height:1.5">
         Код действителен {ttl} минут. Если вы не запрашивали этот код — просто проигнорируйте это письмо.

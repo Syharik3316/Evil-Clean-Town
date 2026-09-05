@@ -127,7 +127,7 @@ async function renderCreateEventForm() {
     const coords = await geocodeYandex(text);
     if (coords && eventMapCtx) {
       eventMapCtx.map.setCenter(coords, 16);
-      setEventMarker(coords);
+      setEventMarker(coords, { updateAddress: false });
     }
   });
 
@@ -141,7 +141,7 @@ async function initEventMap() {
   eventMapCtx.map.events.add("click", (e) => setEventMarker(e.get("coords")));
 }
 
-function setEventMarker(coords) {
+function setEventMarker(coords, { updateAddress = true } = {}) {
   selectedCoords = coords;
   document.getElementById("ce-coords").textContent =
     `Точка сбора: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)} · радиус гео-чекина ${CHECKIN_RADIUS_METERS} м`;
@@ -157,6 +157,15 @@ function setEventMarker(coords) {
     );
     eventPlacemark.events.add("dragend", () => setEventMarker(eventPlacemark.geometry.getCoordinates()));
     eventMapCtx.map.geoObjects.add(eventPlacemark);
+  }
+
+  // Обратная связь карта → форма: клик/перетаскивание метки подставляют читаемый
+  // адрес в поле — иначе организатор видит только координаты, а не улицу/номер дома.
+  if (updateAddress) {
+    const addressInput = document.getElementById("ce-address");
+    reverseGeocodeYandex(coords).then((address) => {
+      if (address && addressInput) addressInput.value = address;
+    });
   }
 }
 

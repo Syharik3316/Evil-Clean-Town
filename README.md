@@ -1,4 +1,9 @@
-# GoodWill
+<img src="frontend/logo.png" alt="GoodWill" width="360" />
+
+📽 **Презентация проекта:** https://drive.google.com/drive/folders/11iSxvKfLbmoAE22dKMpTD1D4Io4uhXEJ?usp=drive_link
+
+> Проект разработан командой **«Злая IT клиника»** на хакатоне **КосмоХакатон 2026** —
+> кейс от компании **«СР Дата»**.
 
 Платформа популяризации экологического мониторинга ДЗЗ и волонтёрских уборок побережья.
 Спутниковый мониторинг (карта до/после) остаётся смысловым центром продукта — уборочные
@@ -259,6 +264,76 @@ nginx из `docker-compose.yml`, который проксирует API на т
 с полями `image_url`, `bounds`, `captured_at`) рассчитана на то, чтобы позже заменить
 сгенерированные картинки на реальные тайлы/снимки через админский API
 (`POST /api/v1/sites`, `POST /api/v1/sites/{id}/layers`) без изменения фронтенда.
+
+### Как добавить свой участок побережья и снимки «до/после»
+
+Отдельного экрана-конструктора для этого нет — участки и снимки заводятся через админский
+API (`/docs` → раздел `sites`, нужен JWT администратора), фронтенд на `/map` подхватывает их
+автоматически. Ниже — весь путь на примере одного участка.
+
+1. **Получите токен администратора:**
+
+   ```bash
+   TOKEN=$(curl -s -X POST https://your-domain.ru/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","password":"<пароль из ADMIN_PASSWORD>"}' \
+     | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+   ```
+
+2. **Создайте участок берега** (`name`/`region`/`description` — любой текст, `lat`/`lon` —
+   координаты центра, куда встанет метка на карте участка):
+
+   ```bash
+   curl -s -X POST https://your-domain.ru/api/v1/sites \
+     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"name":"Пляж у маяка","region":"Краснодарский край","lat":44.9572,"lon":37.7913,
+          "description":"Участок берега рядом со старым маяком"}'
+   ```
+
+   В ответе придёт `"id"` — id нового участка, он нужен для следующего шага (ниже — `4`).
+
+3. **Разместите файлы снимков там, откуда их отдаст nginx.** Проще всего — в общий Docker-том
+   `uploads` (тот же том, куда попадают аватары и фото репортов; отдаётся nginx по пути
+   `/uploads/...`, см. `location ^~ /uploads/` в `nginx/nginx.conf`):
+
+   ```bash
+   docker compose exec backend mkdir -p /app/uploads/satellite
+   docker compose cp ./before.jpg backend:/app/uploads/satellite/beach4_before.jpg
+   docker compose cp ./after.jpg  backend:/app/uploads/satellite/beach4_after.jpg
+   ```
+
+   (Альтернатива для снимков, которые должны жить прямо в репозитории и пересобираться вместе
+   с образом, — положить файлы в `backend/app/static/satellite/` и закоммитить, как это делает
+   демо-датасет в `seed_images.py`; тогда путь будет `/static/satellite/<файл>`.)
+
+4. **Добавьте слои снимка** — по одному вызову на каждую картинку. `bounds` — географический
+   прямоугольник, который занимает снимок на карте, в формате `[[юг, запад], [север, восток]]`
+   (пары `[lat, lon]`); должен совпадать у пары «до/после» одного участка, иначе слайдер и
+   наложение на карте «поедут». `order_index` определяет, какой снимок слайдер на `/map`
+   покажет как «До» (наименьший `order_index` слоя с этим `layer_type`), а какой — как «После»
+   (наибольший); `layer_type` — `rgb` (естественные цвета, обязателен — без него слайдер и
+   нижняя карта не покажут ничего), `ndvi` или `turbidity` (индексы — необязательны, но каждый
+   заведённый тип открывает свою кнопку в блоке «Слой» на `/map`):
+
+   ```bash
+   curl -s -X POST https://your-domain.ru/api/v1/sites/4/layers \
+     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"captured_at":"2026-06-01","layer_type":"rgb","label":"До уборки",
+          "image_url":"/uploads/satellite/beach4_before.jpg",
+          "bounds":[[44.951,37.785],[44.963,37.797]],"order_index":0}'
+
+   curl -s -X POST https://your-domain.ru/api/v1/sites/4/layers \
+     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"captured_at":"2026-08-20","layer_type":"rgb","label":"После уборки",
+          "image_url":"/uploads/satellite/beach4_after.jpg",
+          "bounds":[[44.951,37.785],[44.963,37.797]],"order_index":1}'
+   ```
+
+5. Откройте `/map` — новый участок появится в списке слева, слайдер «до/после» и нижняя
+   Яндекс.Карта с наложенным снимком заработают на реальных изображениях без каких-либо правок
+   фронтенда. Убрать участок целиком (вместе со всеми его слоями) можно через
+   `DELETE /api/v1/sites/{id}` в том же `/docs` — отдельного эндпоинта редактирования
+   названия/координат участка сейчас нет, для этого проще удалить и создать заново.
 
 ## API
 

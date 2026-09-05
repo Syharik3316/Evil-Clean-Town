@@ -139,25 +139,13 @@ hr, .hr { border: 0; border-top: 1px solid var(--color-divider); margin: var(--s
 }
 .topbar-brand {
   display: flex;
-  align-items: baseline;
-  gap: 9px;
+  align-items: center;
   margin-right: auto;
   color: inherit;
   text-decoration: none;
   flex: none;
 }
-.topbar-brand strong {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-}
-.topbar-brand span {
-  font-size: 10px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--color-accent-400);
-}
+.topbar-logo { display: block; height: 42px; width: auto; }
 .topbar-links { display: flex; gap: 2px; flex-wrap: wrap; align-items: center; }
 .topbar-links a,
 .topbar-links button {
@@ -1089,6 +1077,7 @@ a.event-cell:hover { background: var(--color-accent-100); }
   /* Шапка на телефоне: бренд и профиль в первой строке, разделы —
      одной горизонтально прокручиваемой лентой во второй. */
   .topbar-inner { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+  .topbar-logo { height: 32px; }
   .topbar-links { gap: 0; }
   .topbar-links a, .topbar-links button { padding: 7px 9px; font-size: 12.5px; }
   .topbar-links:not(.topbar-auth) {

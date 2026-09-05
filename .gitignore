@@ -17,7 +17,9 @@ backend/local.db
 *.db
 backend/uploads/
 uploads/
-backend/app/static/
+backend/app/static/*
+!backend/app/static/email-logo.png
+backend/app/static/satellite/
 
 # Node (frontend/package.json — dev-сервер serve)
 node_modules/

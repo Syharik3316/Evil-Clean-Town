@@ -86,8 +86,7 @@ async function renderNav(activePage) {
   mount.innerHTML = `
     <div class="topbar-inner">
       <a class="topbar-brand" href="/index">
-        <strong>Чистый берег</strong>
-        <span>Orbital view</span>
+        <img class="topbar-logo" src="/logo.png" alt="GoodWill" />
       </a>
       <div class="topbar-links">${linkHtml}</div>
       <div class="topbar-links topbar-auth">${authHtml}</div>

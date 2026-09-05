@@ -13,7 +13,9 @@ let lessonsCompleted = [];
 let lessonsUser = null;
 
 async function initLessonsPage() {
-  lessonsUser = isLoggedIn() ? await currentUser() : null;
+  requireAuth();
+  if (!isLoggedIn()) return;
+  lessonsUser = await currentUser();
 
   const params = new URLSearchParams(window.location.search);
   const lessonId = params.get("id");
