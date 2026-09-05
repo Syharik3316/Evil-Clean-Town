@@ -3,7 +3,7 @@
   "uid": "chistybereg-activity",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5m",
   "time": { "from": "now-90d", "to": "now" },
   "panels": [
@@ -64,10 +64,94 @@
       ]
     },
     {
+      "id": 10,
+      "type": "stat",
+      "title": "Команд/школ",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM teams",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Мероприятий всего",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM events",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Уроков пройдено всего",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM user_lesson_progress",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Репортов всего",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM trash_reports",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Репортов принято",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) FROM trash_reports WHERE status = 'approved'",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Начислено баллов всего",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT coalesce(sum(points_total), 0) FROM users",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 5,
       "type": "timeseries",
       "title": "Регистрации пользователей по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
@@ -81,7 +165,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "Входы по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
@@ -95,7 +179,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Прохождения курсов по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
@@ -109,7 +193,7 @@
       "id": 8,
       "type": "timeseries",
       "title": "Подтверждённое участие в мероприятиях (чек-ины) по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
@@ -123,12 +207,40 @@
       "id": 9,
       "type": "timeseries",
       "title": "Начисленные баллы по дням",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), sum(amount) AS \"Баллы\" FROM points_ledger WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
           "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "bargauge",
+      "title": "Баллы команд/школ по городам",
+      "gridPos": { "h": 8, "w": 10, "x": 0, "y": 32 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT city AS \"metric\", sum(points_total) AS \"value\" FROM teams WHERE city IS NOT NULL GROUP BY city ORDER BY sum(points_total) DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "История мероприятий",
+      "gridPos": { "h": 10, "w": 14, "x": 10, "y": 32 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "targets": [
+        {
+          "rawSql": "SELECT title AS \"Название\", event_type AS \"Тип\", starts_at AS \"Дата\", coalesce(region, '—') AS \"Регион\", status AS \"Статус\" FROM events ORDER BY created_at DESC LIMIT 50",
+          "format": "table",
           "refId": "A"
         }
       ]

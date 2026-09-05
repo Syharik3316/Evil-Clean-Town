@@ -13,21 +13,33 @@ flowchart LR
     Nginx -->|"/uploads/* (alias, минуя backend)"| UploadsVol[(uploads volume)]
     Backend --> DB[(PostgreSQL :5432)]
     Backend --> UploadsVol
-    Grafana["Grafana :3000"] -->|"SELECT-only, роль grafana_reader"| DB
+    Browser -->|"iframe :3000, /admin"| Grafana["Grafana :3000"]
+    Grafana -->|"SELECT-only, роль grafana_reader"| DB
     Backend -->|SMTP, если настроен| MailServer[(внешний SMTP)]
 ```
 
 - **backend**: единственный сервис с бизнес-логикой; на старте (`entrypoint.sh`) прогоняет
-  `alembic upgrade head`, затем сидирует БД (`app/db/seed.py`), затем поднимает uvicorn.
+  `alembic upgrade head`, засеивает справочник учреждений (всегда), затем демо-данные
+  (`app/db/seed.py`, только если `SEED_ON_STARTUP=true`), затем поднимает uvicorn.
 - **nginx**: единственная точка входа снаружи (порт 80). Раздаёт `frontend/` как статику,
   проксирует `/api/`, `/static/`, `/docs|/redoc|/openapi.json` на backend, отдаёт
   `/uploads/` напрямую с диска (без похода в backend).
-- **grafana**: отдельный порт (3000, не через nginx). Ходит в ту же Postgres-БД под
-  read-only ролью `grafana_reader` (создаётся миграцией `e5f2a9c31d08`), датасорс и
-  дашборд провизионируются из `grafana/provisioning/`.
-- **db**: Postgres 16. В dev/тестах backend вместо неё может работать на SQLite
-  (`DATABASE_URL` не задан) — тесты используют in-memory SQLite напрямую через
-  `Base.metadata.create_all`, миграции Alembic в тестах не участвуют.
+- **grafana**: отдельный порт (3000, не через nginx — браузер ходит туда напрямую, в том
+  числе для iframe на `/admin`, см. ниже). Ходит в ту же Postgres-БД под read-only ролью
+  `grafana_reader` (создаётся миграцией `e5f2a9c31d08`), датасорс и дашборд
+  провизионируются из `grafana/provisioning/`. Анонимный доступ уровня Viewer +
+  `GF_SECURITY_ALLOW_EMBEDDING=true` включены (`docker-compose.yml`) специально ради
+  встраивания в iframe без отдельного логина — это открывает сам дашборд (агрегаты, без
+  персональных данных) всем, кто достучится до порта 3000; закрывайте порт файрволом на
+  проде, если это нежелательно (см. README, раздел про VDS).
+- **db**: Postgres 16, инициализируется **только на первом старте пустого volume**
+  значениями `POSTGRES_USER/PASSWORD/DB` из `.env` (стандартное поведение official-образа
+  `postgres`) — смена `.env` после первого запуска не меняет пароль уже существующей
+  роли внутри уже существующего volume; нужно либо руками поменять пароль роли
+  (`ALTER ROLE ... PASSWORD ...` через `psql`), либо снести volume `pgdata` (потеря
+  данных). В dev/тестах backend вместо Postgres может работать на SQLite (`DATABASE_URL`
+  не задан) — тесты используют in-memory SQLite напрямую через `Base.metadata.create_all`,
+  миграции Alembic в тестах не участвуют.
 
 ## Backend: слои
 
@@ -125,6 +137,14 @@ Multi-page vanilla JS (без сборки), один `js/api.js` на все с
 сама проверяет роль при загрузке и показывает «Доступно только …» неавторизованным ролям
 (защита на бэкенде обязательна и первична — фронтовая проверка только для UX и для того,
 чтобы не показывать элементы интерфейса, которые всё равно приведут к 403).
+
+**`/admin`**: не собственная статистика (raw-запросы `/admin/stats`/`/admin/events` в
+backend всё ещё существуют и работают, но фронтенд их больше не вызывает) — вместо этого
+`js/admin.js` встраивает Grafana-дашборд `chistybereg-activity` через `<iframe>`
+(`${location.hostname}:${GRAFANA_PORT}` из `js/config.js`), с ссылкой-фолбэком на прямое
+открытие дашборда на случай, если iframe не загрузился (например, из-за mixed content —
+если сайт на HTTPS, а Grafana только на HTTP, браузер заблокирует именно iframe, но не
+переход по ссылке в новой вкладке).
 
 **Чистые адреса**: все внутренние ссылки и редиректы используют пути без `.html`
 (`/events`, `/profile`, …) — сами файлы на диске остаются `events.html`, `profile.html` и

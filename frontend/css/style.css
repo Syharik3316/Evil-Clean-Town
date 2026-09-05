@@ -333,6 +333,22 @@ table th, table td { text-align: left; padding: 8px; border-bottom: 1px solid va
 .suggest-item:last-child { border-bottom: none; }
 .suggest-item:hover { background: #f4f8f7; }
 
+/* Встроенный дашборд Grafana (страница /admin) */
+.grafana-embed {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+}
+.grafana-embed iframe {
+  display: block;
+  width: 100%;
+  height: 80vh;
+  min-height: 640px;
+  border: none;
+}
+
 /* Футер */
 .site-footer {
   background: var(--surface); border-top: 1px solid var(--border);
