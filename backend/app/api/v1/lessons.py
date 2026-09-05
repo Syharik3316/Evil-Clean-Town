@@ -75,6 +75,24 @@ async def list_lessons(
     return result.scalars().all()
 
 
+@router.get("/me/completed", response_model=list[int])
+async def my_completed_lessons(
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """id уроков, которые текущий пользователь уже прошёл.
+
+    Нужен странице курса, чтобы показать прогресс («2 из 4 модулей»)
+    и отметить пройденные модули в боковой навигации.
+    """
+    if user is None:
+        return []
+    result = await db.execute(
+        select(UserLessonProgress.lesson_id).where(UserLessonProgress.user_id == user.id)
+    )
+    return list(result.scalars().all())
+
+
 @router.get("/{lesson_id}")
 async def get_lesson(
     lesson_id: int,

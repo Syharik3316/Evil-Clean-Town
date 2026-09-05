@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Уроки — Чистый берег</title>
+  <title>Мероприятие — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -11,10 +11,11 @@
 <body>
   <nav class="topbar" id="app-nav"></nav>
 
-  <main class="wrap">
-    <div id="lessons-root">
+  <main class="wrap" id="event-page">
+    <div id="event-root">
       <div class="skeleton skeleton-line-short"></div>
       <div class="skeleton skeleton-card"></div>
+      <div class="skeleton"></div>
       <div class="skeleton"></div>
     </div>
   </main>
@@ -25,11 +26,12 @@
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>
-  <script src="/js/lessons.js"></script>
+  <script src="/js/yamaps.js"></script>
+  <script src="/js/event.js"></script>
   <script>
-    renderNav("/lessons");
+    renderNav("/events");
     renderFooter();
-    initLessonsPage();
+    initEventPage();
   </script>
 </body>
 </html>

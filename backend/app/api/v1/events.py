@@ -83,6 +83,27 @@ async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
     return event
 
 
+@router.get("/{event_id}/my-registration", response_model=EventRegistrationOut | None)
+async def my_registration(
+    event_id: int,
+    user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Заявка текущего пользователя на мероприятие (или null).
+
+    Нужна странице мероприятия, чтобы показать статус заявки и открыть
+    гео-чекин только тогда, когда организатор её уже одобрил.
+    """
+    if user is None:
+        return None
+    result = await db.execute(
+        select(EventRegistration).where(
+            EventRegistration.event_id == event_id, EventRegistration.user_id == user.id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 @router.post("", response_model=EventOut, status_code=status.HTTP_201_CREATED)
 async def create_event(
     payload: EventCreate,

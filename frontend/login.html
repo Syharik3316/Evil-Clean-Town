@@ -5,31 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Вход — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container" style="max-width:420px">
-    <h1>Вход</h1>
-    <div class="card fade-in">
-      <div id="alert"></div>
-      <form id="login-form">
-        <div class="field">
-          <label for="username">Логин</label>
-          <input type="text" id="username" required />
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap">
+    <div class="cols" style="grid-template-columns:minmax(0,1fr) 380px;gap:56px">
+      <div style="max-width:460px">
+        <div class="kicker">Вход в платформу</div>
+        <h1>С возвращением</h1>
+        <p class="lead">Войдите, чтобы записываться на уборки, проходить курсы и отправлять репорты о мусоре.</p>
+
+        <div id="alert"></div>
+        <form id="login-form">
+          <div class="field">
+            <label for="username">Логин</label>
+            <input class="input" type="text" id="username" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="password">Пароль</label>
+            <input class="input" type="password" id="password" autocomplete="current-password" required />
+          </div>
+          <button class="btn btn-primary btn-lg btn-block" type="submit">Войти</button>
+        </form>
+        <p class="muted" style="margin-top:16px;font-size:13.5px">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+      </div>
+
+      <div class="panel-dark" style="padding:26px 28px">
+        <div class="micro" style="margin-bottom:12px">Что даёт аккаунт</div>
+        <div style="display:flex;flex-direction:column;gap:16px;font-size:13.5px">
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-broom" style="font-size:20px;color:var(--color-accent-300)"></i><span>Запись на уборки побережья и гео-чекин на месте</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-book-open-text" style="font-size:20px;color:var(--color-accent-300)"></i><span>Курс об экомониторинге с квизами и баллами</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-camera" style="font-size:20px;color:var(--color-accent-300)"></i><span>Репорты о мусоре с координатами на Яндекс.Карте</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-medal" style="font-size:20px;color:var(--color-accent-300)"></i><span>Ачивки, рамки аватара и место в лидерборде школы</span></div>
         </div>
-        <div class="field">
-          <label for="password">Пароль</label>
-          <input type="password" id="password" required />
-        </div>
-        <button class="btn" type="submit" style="width:100%">Войти</button>
-      </form>
-      <p class="muted" style="margin-top:14px">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+      </div>
     </div>
-  </div>
+  </main>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>

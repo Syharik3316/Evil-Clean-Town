@@ -5,67 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Регистрация — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container" style="max-width:420px">
-    <h1>Регистрация</h1>
-    <div class="card fade-in">
-      <div id="alert"></div>
-      <form id="register-form">
-        <div class="field">
-          <label for="display_name">Имя</label>
-          <input type="text" id="display_name" required />
-        </div>
-        <div class="field">
-          <label for="username">Логин</label>
-          <input type="text" id="username" minlength="3" required />
-        </div>
-        <div class="field">
-          <label for="email">Активная почта</label>
-          <input type="email" id="email" required />
-        </div>
-        <div class="field">
-          <label for="password">Пароль</label>
-          <input type="password" id="password" minlength="6" required />
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap">
+    <div class="cols" style="grid-template-columns:minmax(0,1fr) 380px;gap:56px">
+      <div style="max-width:460px">
+        <div class="kicker">Регистрация</div>
+        <h1>Присоединяйтесь к пилоту</h1>
+        <p class="lead">Волонтёру достаточно почты и логина. Организатору дополнительно нужен ИНН организации — его проверит администратор фонда.</p>
+
+        <div class="seg" style="margin-bottom:22px" id="role-switch">
+          <button type="button" class="active" data-role="volunteer">Я волонтёр</button>
+          <button type="button" data-role="organizer">Я организатор</button>
         </div>
 
-        <div id="organizer-fields" hidden>
+        <div id="alert"></div>
+        <form id="register-form">
           <div class="field">
-            <label for="org_name">Название организации</label>
-            <input type="text" id="org_name" />
+            <label for="display_name">Имя</label>
+            <input class="input" type="text" id="display_name" required />
           </div>
           <div class="field">
-            <label for="inn">ИНН</label>
-            <input type="text" id="inn" inputmode="numeric" pattern="[0-9]{10,12}" />
+            <label for="username">Логин</label>
+            <input class="input" type="text" id="username" minlength="3" required />
           </div>
-        </div>
+          <div class="field">
+            <label for="email">Активная почта</label>
+            <input class="input" type="email" id="email" required />
+          </div>
+          <div class="field">
+            <label for="password">Пароль</label>
+            <input class="input" type="password" id="password" minlength="6" required />
+          </div>
 
-        <button class="btn" type="submit" style="width:100%">Создать аккаунт</button>
-      </form>
-      <button class="btn secondary" id="organizer-toggle" style="width:100%; margin-top:10px">Я организатор</button>
-      <p class="muted" style="margin-top:14px">Уже есть аккаунт? <a href="/login">Войти</a></p>
+          <div id="organizer-fields" hidden>
+            <div class="note" style="margin-bottom:16px">Организация проверяется по ИНН — после регистрации мероприятия проходят модерацию администратора фонда.</div>
+            <div class="field">
+              <label for="org_name">Название организации</label>
+              <input class="input" type="text" id="org_name" />
+            </div>
+            <div class="field">
+              <label for="inn">ИНН</label>
+              <input class="input" type="text" id="inn" inputmode="numeric" pattern="[0-9]{10,12}" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg btn-block" type="submit">Создать аккаунт</button>
+        </form>
+        <p class="muted" style="margin-top:16px;font-size:13.5px">Уже есть аккаунт? <a href="/login">Войти</a></p>
+      </div>
+
+      <div class="panel-dark" style="padding:26px 28px">
+        <div class="micro" style="margin-bottom:12px">Как это работает</div>
+        <div style="display:flex;flex-direction:column;gap:16px;font-size:13.5px">
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-envelope-simple" style="font-size:20px;color:var(--color-accent-300)"></i><span>На почту придёт код подтверждения — введите его в открывшемся окне</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-identification-badge" style="font-size:20px;color:var(--color-accent-300)"></i><span>Для уборок подтвердите возраст (14+) в профиле</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-graduation-cap" style="font-size:20px;color:var(--color-accent-300)"></i><span>Пройдите базовый курс волонтёра — он открывает запись на уборки</span></div>
+          <div style="display:flex;gap:11px"><i class="ph-duotone ph-map-pin-area" style="font-size:20px;color:var(--color-accent-300)"></i><span>На месте подтвердите участие гео-чекином и получите баллы</span></div>
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
 
   <div class="modal-backdrop" id="code-modal" hidden>
     <div class="modal">
       <h2>Подтверждение почты</h2>
-      <p class="muted">Мы отправили код подтверждения на <strong id="code-modal-email"></strong>.</p>
+      <p class="muted" style="font-size:13.5px">Мы отправили код подтверждения на <strong id="code-modal-email"></strong>.</p>
       <div id="code-alert"></div>
       <form id="code-form">
         <div class="field">
           <label for="code">Код из письма</label>
-          <input type="text" id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus />
+          <input class="input" type="text" id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus />
         </div>
-        <button class="btn" type="submit" style="width:100%">Подтвердить</button>
+        <button class="btn btn-primary btn-block" type="submit">Подтвердить</button>
       </form>
     </div>
   </div>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>
@@ -76,26 +99,26 @@
     let isOrganizer = false;
     let pendingEmail = "";
 
-    document.getElementById("organizer-toggle").addEventListener("click", () => {
-      isOrganizer = !isOrganizer;
-      document.getElementById("organizer-fields").hidden = !isOrganizer;
-      document.getElementById("org_name").required = isOrganizer;
-      document.getElementById("inn").required = isOrganizer;
-      document.getElementById("organizer-toggle").textContent = isOrganizer
-        ? "Я волонтёр"
-        : "Я организатор";
+    document.querySelectorAll("#role-switch [data-role]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        isOrganizer = btn.dataset.role === "organizer";
+        document.querySelectorAll("#role-switch [data-role]").forEach((b) => b.classList.toggle("active", b === btn));
+        document.getElementById("organizer-fields").hidden = !isOrganizer;
+        document.getElementById("org_name").required = isOrganizer;
+        document.getElementById("inn").required = isOrganizer;
+      });
     });
 
     document.getElementById("register-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const alertEl = document.getElementById("alert");
       alertEl.innerHTML = "";
-      const display_name = document.getElementById("display_name").value.trim();
-      const username = document.getElementById("username").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      const payload = { display_name, username, email, password };
+      const payload = {
+        display_name: document.getElementById("display_name").value.trim(),
+        username: document.getElementById("username").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        password: document.getElementById("password").value,
+      };
       const path = isOrganizer ? "/auth/register/organizer" : "/auth/register";
       if (isOrganizer) {
         payload.org_name = document.getElementById("org_name").value.trim();

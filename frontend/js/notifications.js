@@ -9,20 +9,23 @@ async function initNotificationsPage() {
 
 async function loadNotifications() {
   const root = document.getElementById("notifications-root");
+  root.innerHTML = skeletonLines(5);
   try {
     const notifications = await api.get("/notifications");
     if (!notifications.length) {
-      root.innerHTML = '<p class="muted">Уведомлений пока нет.</p>';
+      root.innerHTML = '<p class="muted" style="border-top:1px solid var(--color-divider);padding-top:20px">Уведомлений пока нет.</p>';
       return;
     }
     root.innerHTML = notifications
       .map(
         (n) => `
         <div class="notification-item${n.read_at ? "" : " unread"}" id="notif-${n.id}">
-          <strong>${escapeHtml(n.title)}</strong>
-          ${n.body ? `<p class="muted">${escapeHtml(n.body)}</p>` : ""}
-          <p class="muted">${formatDate(n.created_at)}</p>
-          ${n.read_at ? "" : `<button class="btn secondary" data-read="${n.id}">Отметить прочитанным</button>`}
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <strong style="font-family:var(--font-heading);font-size:15.5px">${escapeHtml(n.title)}</strong>
+            <span class="muted" style="font-size:11.5px;margin-left:auto">${formatDate(n.created_at)}</span>
+          </div>
+          ${n.body ? `<p class="muted" style="margin:5px 0 0;font-size:13.5px">${escapeHtml(n.body)}</p>` : ""}
+          ${n.read_at ? "" : `<button class="btn btn-secondary btn-sm" style="margin-top:8px" data-read="${n.id}">Отметить прочитанным</button>`}
         </div>`
       )
       .join("");

@@ -1,292 +1,278 @@
+/* Профиль: ачивки, история баллов, календарь активности и лидерборд.
+   Разметка — по дизайну newfront (Broadsheet). */
+
+const ROLE_LABELS = { volunteer: "Волонтёр", organizer: "Организатор", admin: "Администратор" };
+const AGE_METHOD_LABELS = { gosuslugi: "Госуслуги", manual: "вручную" };
+
+let profileUser = null;
+let profileBoardScope = "users";
+
 async function initProfilePage() {
   requireAuth();
-  const user = await currentUser(true);
+  profileUser = await currentUser(true);
+  if (!profileUser) return;
 
-  if (user.role === "organizer") {
-    document.getElementById("leaderboard-section").remove();
-    renderOrganizerProfile(user);
-  } else if (user.role === "admin") {
-    document.getElementById("leaderboard-section").remove();
-    renderAdminProfile(user);
-  } else {
-    await renderVolunteerProfile(user);
-    bindLeaderboard();
-  }
+  if (profileUser.role === "organizer") renderOrganizerProfile(profileUser);
+  else if (profileUser.role === "admin") renderAdminProfile(profileUser);
+  else await renderVolunteerProfile(profileUser);
 }
 
-function roleLabel(role) {
-  return { volunteer: "Волонтёр", organizer: "Организатор", admin: "Администратор" }[role] || role;
+function avatarBox(user) {
+  const frame = user.selected_avatar_frame ? `frame-${user.selected_avatar_frame}` : "frame-none";
+  return user.avatar_url
+    ? `<figure class="avatar-box ${frame}" style="margin:0"><img src="${escapeHtml(user.avatar_url)}" alt="Фото профиля" /></figure>`
+    : `<figure class="avatar-box ${frame}" style="margin:0">${escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase())}</figure>`;
 }
 
-function ageMethodLabel(method) {
-  return { gosuslugi: "Госуслуги", manual: "вручную" }[method] || method;
-}
-
-function avatarCircleHtml(user, frameClass = "frame-none") {
-  return `<div class="${frameClass}" style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700">
-    ${escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase())}
-  </div>`;
-}
-
-/* ---------- Организатор: компактный профиль организации ---------- */
-
-function renderOrganizerProfile(user) {
-  const root = document.getElementById("profile-root");
-  const org = user.organization;
-
-  root.innerHTML = `
-    <div style="display:flex; align-items:center; gap:16px">
-      ${avatarCircleHtml(user)}
-      <div>
-        <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
-        <span class="badge">${roleLabel(user.role)}</span>
-      </div>
-    </div>
-
-    <h2>Организация</h2>
-    <div class="card">
-      ${
-        org
-          ? `<p><strong>${escapeHtml(org.name)}</strong></p>
-             <p class="muted">ИНН ${escapeHtml(org.inn)} · ${org.legal_type === "legal_entity" ? "Юридическое лицо" : "ИП"}</p>
-             <p class="badge">${Math.round(org.points_total)} баллов организации</p>`
-          : '<p class="muted">Организация не указана.</p>'
-      }
-    </div>
-
-    <h2>Быстрые действия</h2>
-    <div class="grid">
-      <div class="card">
-        <h2 style="margin-top:0">🧹 Мои мероприятия</h2>
-        <p class="muted">Создание мероприятий и заявки волонтёров.</p>
-        <a href="/organizer">Перейти →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📘 Курсы</h2>
-        <p class="muted">Создание и модерация обучающих курсов.</p>
-        <a href="/lessons">Перейти →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📸 Репорты</h2>
-        <p class="muted">Модерация репортов о мусоре от волонтёров.</p>
-        <a href="/reports">Перейти →</a>
-      </div>
-    </div>
-
-    <h2>Аккаунт</h2>
-    <div class="card">
-      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
-      <p>Email: <strong>${escapeHtml(user.email)}</strong> ${user.email_verified ? '<span class="badge approved">подтверждён</span>' : '<span class="badge pending">не подтверждён</span>'}</p>
-    </div>
-  `;
-}
-
-/* ---------- Админ: минимальный аккаунт-профиль ---------- */
-
-function renderAdminProfile(user) {
-  const root = document.getElementById("profile-root");
-
-  root.innerHTML = `
-    <div style="display:flex; align-items:center; gap:16px">
-      ${avatarCircleHtml(user)}
-      <div>
-        <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
-        <span class="badge">${roleLabel(user.role)}</span>
-      </div>
-    </div>
-
-    <h2>Быстрые действия</h2>
-    <div class="grid">
-      <div class="card">
-        <h2 style="margin-top:0">🎫 Тикеты</h2>
-        <p class="muted">Модерация предложенных мероприятий и курсов.</p>
-        <a href="/tickets">Перейти →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📊 Статистика</h2>
-        <p class="muted">Сводная статистика фонда.</p>
-        <a href="/admin">Перейти →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📸 Репорты</h2>
-        <p class="muted">Модерация репортов о мусоре.</p>
-        <a href="/reports">Перейти →</a>
-      </div>
-    </div>
-
-    <h2>Аккаунт</h2>
-    <div class="card">
-      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
-      <p>Email: <strong>${escapeHtml(user.email)}</strong></p>
-    </div>
-  `;
-}
-
-/* ---------- Волонтёр: геймификация ---------- */
+/* ------------------------------------------------------------ волонтёр --- */
 
 async function renderVolunteerProfile(user) {
   const root = document.getElementById("profile-root");
 
-  const [achievements, points, teams, framesRes] = await Promise.all([
-    api.get("/users/me/achievements"),
-    api.get("/users/me/points"),
-    api.get("/teams"),
-    api.get("/users/me/avatar-frames"),
+  const [earned, allAchievements, points, teams, framesRes] = await Promise.all([
+    api.get("/users/me/achievements").catch(() => []),
+    api.get("/achievements").catch(() => []),
+    api.get("/users/me/points").catch(() => []),
+    api.get("/teams").catch(() => []),
+    api.get("/users/me/avatar-frames").catch(() => ({ frames: [] })),
   ]);
+
+  const earnedCodes = new Set(earned.map((a) => a.achievement.code));
   const unlockedFrames = framesRes.frames || [];
-
-  const achievementsHtml = achievements.length
-    ? `<div class="grid">${achievements
-        .map(
-          (a) => `
-          <div class="card">
-            <div style="font-size:1.6rem">${a.achievement.icon}</div>
-            <strong>${escapeHtml(a.achievement.title)}</strong>
-            <p class="muted">${escapeHtml(a.achievement.description)}</p>
-          </div>`
-        )
-        .join("")}</div>`
-    : '<p class="muted">Пока нет ачивок — пройди урок или мероприятие, чтобы получить первую!</p>';
-
-  const pointsHtml = points.length
-    ? `<table><tbody>${points
-        .map(
-          (p) => `<tr><td>${formatDate(p.created_at)}</td><td>${escapeHtml(p.reason)}</td><td>+${Math.round(p.amount)}</td></tr>`
-        )
-        .join("")}</tbody></table>`
-    : '<p class="muted">Пока нет начислений баллов.</p>';
-
-  const frameClass = `frame-${user.selected_avatar_frame || "none"}`;
+  const team = teams.find((t) => t.id === user.team_id);
 
   root.innerHTML = `
-    <div style="display:flex; align-items:center; gap:16px">
-      ${avatarCircleHtml(user, frameClass)}
-      <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
-    </div>
-    <div class="grid">
-      <div class="card">
-        <p class="muted">Баллы</p>
-        <h2 style="margin:0">${Math.round(user.points_total)}</h2>
+    <div class="profile-head">
+      ${avatarBox(user)}
+      <div style="min-width:280px">
+        <div class="kicker">Профиль волонтёра</div>
+        <h1>${escapeHtml(user.display_name)}</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+          <span class="tag tag-accent">${ROLE_LABELS[user.role] || user.role}</span>
+          ${team ? `<span class="tag tag-neutral">${escapeHtml(team.name)}${team.city ? " · " + escapeHtml(team.city) : ""}</span>` : ""}
+          <span class="tag tag-outline">${user.age_verified ? `возраст подтверждён (${AGE_METHOD_LABELS[user.age_verification_method] || user.age_verification_method})` : "возраст не подтверждён"}</span>
+        </div>
+        <p class="muted" style="font-size:14.5px;max-width:52ch;margin:0">
+          Мой уровень эко-грамотности: ${Math.round(user.points_total)} баллов, ачивок: ${earned.length} из ${allAchievements.length || earned.length}.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+          <button type="button" class="btn btn-primary" id="share-btn"><i class="ph-duotone ph-share-network" style="font-size:17px"></i>Поделиться результатом</button>
+          <a class="btn btn-secondary" id="share-vk" target="_blank" rel="noopener">ВКонтакте</a>
+          <a class="btn btn-secondary" id="share-tg" target="_blank" rel="noopener">Telegram</a>
+        </div>
+        <div id="share-status" style="margin-top:14px"></div>
       </div>
-      <div class="card">
-        <p class="muted">Роль</p>
-        <h2 style="margin:0">${roleLabel(user.role)}</h2>
-      </div>
-      <div class="card">
-        <p class="muted">Ачивок получено</p>
-        <h2 style="margin:0">${achievements.length}</h2>
-      </div>
-      <div class="card">
-        <p class="muted">Огонёк участия</p>
-        <h2 style="margin:0">🔥 ${user.current_streak} <span class="muted" style="font-size:0.8rem">(рекорд: ${user.longest_streak})</span></h2>
-      </div>
-    </div>
-
-    <h2>Рамка аватара</h2>
-    <div class="card">
-      ${unlockedFrames.length
-        ? `<div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn secondary" data-frame="">Без рамки</button>
-            ${unlockedFrames
-              .map(
-                (f) =>
-                  `<button class="btn secondary frame-${f}" data-frame="${f}" style="border-radius:50%;width:44px;height:44px;padding:0"></button>`
-              )
-              .join("")}
-          </div>`
-        : '<p class="muted">Получайте ачивки, чтобы открывать рамки для аватара.</p>'}
-    </div>
-
-    <h2>Верификация возраста</h2>
-    <div class="card">
-      <p>
-        Статус:
-        ${user.age_verified
-          ? `<span class="badge approved">Подтверждён (${ageMethodLabel(user.age_verification_method)})</span>`
-          : '<span class="badge pending">Не подтверждён</span>'}
-      </p>
-      <p class="muted">Верификация возраста (от 14 лет) нужна для записи на мероприятия и полного доступа к платформе.</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
-        <button class="gos-btn" id="gosuslugi-btn" ${user.age_verified ? "disabled" : ""}><img src="/icons/gos.png" alt="Войти через Госуслуги" /></button>
-        <button class="btn secondary" id="manual-verify-btn" ${user.age_verified ? "disabled" : ""}>Ручная верификация</button>
-      </div>
-      <p id="verify-status" class="muted"></p>
-    </div>
-
-    <h2>Внешние сервисы</h2>
-    <div class="card">
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="btn secondary" id="dobro-btn" ${user.dobro_ru_linked ? "disabled" : ""}>${user.dobro_ru_linked ? "Добро.рф привязан ✓" : "Привязать Добро.рф"}</button>
-        <button class="btn secondary" id="dvizhenie-btn" ${user.dvizhenie_pervyh_linked ? "disabled" : ""}>${user.dvizhenie_pervyh_linked ? "Движение Первых привязано ✓" : "Привязать «Движение Первых»"}</button>
+      <div class="profile-stats">
+        <div class="profile-stat"><span class="v">${Math.round(user.points_total)}</span><div class="k">баллов</div></div>
+        <div class="profile-stat"><span class="v">${earned.length}</span><div class="k">ачивок</div></div>
+        <div class="profile-stat"><span class="v">${user.current_streak}</span><div class="k">дней подряд</div></div>
       </div>
     </div>
 
-    <h2>Моя команда/школа</h2>
-    <div class="card">
-      <div class="field">
-        <label for="team-select">Команда, клуб или школа</label>
-        <select id="team-select">
-          <option value="">— не выбрано —</option>
-          ${teams
-            .map(
-              (t) =>
-                `<option value="${t.id}" ${user.team_id === t.id ? "selected" : ""}>${escapeHtml(t.name)}${t.city ? " · " + escapeHtml(t.city) : ""}</option>`
-            )
+    <div style="border-top:1px solid var(--color-divider);padding:32px 0 40px">
+      <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <h3 style="margin:0">Настройки профиля</h3>
+        <button type="button" class="btn btn-secondary" id="toggle-settings" style="margin-left:auto">Показать настройки</button>
+      </div>
+      <div id="profile-settings" hidden>
+        <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px">
+          <div>
+            <div class="micro" style="margin-bottom:14px">Верификация возраста</div>
+            <p class="muted" style="font-size:12.5px;line-height:1.5;max-width:44ch">Подтверждение возраста (14+) нужно для записи на уборки побережья.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+              <button class="gos-btn" id="gosuslugi-btn" ${user.age_verified ? "disabled" : ""}><img src="/icons/gos.png" alt="Войти через Госуслуги" /></button>
+              <button class="btn btn-secondary" id="manual-verify-btn" ${user.age_verified ? "disabled" : ""}>Ручная верификация</button>
+            </div>
+            <p class="muted" style="font-size:12.5px" id="verify-status">${user.age_verified ? "Возраст подтверждён." : "Возраст пока не подтверждён."}</p>
+          </div>
+
+          <div>
+            <div class="micro" style="margin-bottom:14px">Внешние сервисы</div>
+            <div class="link-row">
+              <div class="logo"><i class="ph-duotone ph-identification-badge"></i></div>
+              <div style="flex:1">
+                <div class="t">Госуслуги</div>
+                <div class="s">${user.age_verification_method === "gosuslugi" ? "личность подтверждена" : "не подключены"}</div>
+              </div>
+            </div>
+            <div class="link-row">
+              <div class="logo"><i class="ph-duotone ph-hand-heart"></i></div>
+              <div style="flex:1">
+                <div class="t">Добро.рф</div>
+                <div class="s">${user.dobro_ru_linked ? "привязан" : "не привязан"}</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="dobro-btn" ${user.dobro_ru_linked ? "disabled" : ""}>${user.dobro_ru_linked ? "✓" : "Привязать"}</button>
+            </div>
+            <div class="link-row">
+              <div class="logo"><i class="ph-duotone ph-users-three"></i></div>
+              <div style="flex:1">
+                <div class="t">Движение Первых</div>
+                <div class="s">${user.dvizhenie_pervyh_linked ? "привязано" : "не привязано"}</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="dvizhenie-btn" ${user.dvizhenie_pervyh_linked ? "disabled" : ""}>${user.dvizhenie_pervyh_linked ? "✓" : "Привязать"}</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="micro" style="margin-bottom:14px">Команда и рамка аватара</div>
+            <div class="field">
+              <label for="team-select">Команда, клуб или школа</label>
+              <select class="input" id="team-select">
+                <option value="">— не выбрано —</option>
+                ${teams
+                  .map(
+                    (t) =>
+                      `<option value="${t.id}" ${user.team_id === t.id ? "selected" : ""}>${escapeHtml(t.name)}${t.city ? " · " + escapeHtml(t.city) : ""}</option>`
+                  )
+                  .join("")}
+              </select>
+            </div>
+            <p class="muted" style="font-size:12.5px" id="team-status"></p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              ${
+                unlockedFrames.length
+                  ? `<button class="btn btn-secondary btn-sm" data-frame="">Без рамки</button>` +
+                    unlockedFrames
+                      .map(
+                        (f) =>
+                          `<button class="btn btn-secondary frame-${f}" data-frame="${f}" title="Рамка ${f}" style="border-radius:50%;width:40px;height:40px;padding:0"></button>`
+                      )
+                      .join("")
+                  : '<p class="muted" style="font-size:12.5px;margin:0">Получайте ачивки, чтобы открывать рамки для аватара.</p>'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols cols-side-wide">
+      <div>
+        <h3>Ачивки</h3>
+        <p class="muted" style="font-size:13.5px;margin:0 0 18px">Получено ${earned.length} из ${allAchievements.length || earned.length}.</p>
+        <div class="ach-grid">
+          ${(allAchievements.length ? allAchievements : earned.map((e) => e.achievement))
+            .map((a) => {
+              const got = earnedCodes.has(a.code);
+              return `
+              <div class="ach${got ? " got" : ""}">
+                ${got ? '<i class="ph-duotone ph-check-circle check"></i>' : ""}
+                <div class="badge-round">${escapeHtml(a.icon || "★")}</div>
+                <div class="t">${escapeHtml(a.title)}</div>
+                <div class="d">${escapeHtml(a.description)}</div>
+                <div class="s">${got ? "получена" : `+${a.points_reward} б. за получение`}</div>
+              </div>`;
+            })
             .join("")}
-        </select>
+        </div>
+
+        <h3 style="margin:44px 0 10px">История баллов</h3>
+        ${
+          points.length
+            ? `<table class="table">
+                <thead><tr><th>Дата</th><th>За что</th><th style="text-align:right">Баллы</th></tr></thead>
+                <tbody>
+                  ${points
+                    .map(
+                      (p) => `<tr>
+                        <td style="white-space:nowrap">${formatDate(p.created_at)}</td>
+                        <td>${escapeHtml(p.reason)}</td>
+                        <td style="text-align:right;font-family:var(--font-heading);font-weight:600;white-space:nowrap">+${Math.round(p.amount)}</td>
+                      </tr>`
+                    )
+                    .join("")}
+                </tbody>
+              </table>`
+            : '<p class="muted">Пока нет начислений баллов — пройди урок или отправь репорт.</p>'
+        }
       </div>
-      <p class="muted" id="team-status"></p>
-    </div>
 
-    <h2>Мои ачивки</h2>
-    ${achievementsHtml}
+      <div>
+        <h3>Календарь активности</h3>
+        <p class="muted" style="font-size:12.5px;margin:0 0 12px">Когда вы были на площадке и когда занимались на сайте.</p>
+        <div class="cal-grid">${activityCalendar(points)}</div>
+        <div class="cal-legend">
+          <span><i style="background:var(--color-accent)"></i>на площадке</span>
+          <span><i style="background:var(--color-accent-2-400)"></i>урок на сайте</span>
+          <span><i style="background:var(--color-neutral-200)"></i>нет активности</span>
+        </div>
 
-    <h2>Соц-шеринг</h2>
-    <div class="card">
-      <p>Мой уровень эко-грамотности: <strong>${Math.round(user.points_total)} баллов</strong>, ачивок: <strong>${achievements.length}</strong>.</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="btn secondary" id="share-btn">Поделиться результатом</button>
-        <a class="btn secondary" id="share-vk" target="_blank" rel="noopener">Поделиться ВКонтакте</a>
-        <a class="btn secondary" id="share-tg" target="_blank" rel="noopener">Поделиться в Telegram</a>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
+          <h3 style="margin:0">Лидерборд</h3>
+          <div class="seg" style="margin-left:auto" id="board-scopes">
+            <button type="button" class="active" data-scope="users">Люди</button>
+            <button type="button" data-scope="teams">Команды</button>
+          </div>
+        </div>
+        <div id="leaderboard-table">${skeletonLines(5)}</div>
       </div>
-      <p id="share-status" class="muted"></p>
-    </div>
+    </div>`;
 
-    <h2>История баллов</h2>
-    <div class="card">${pointsHtml}</div>
-  `;
+  bindVolunteerProfile(user, earned);
+  loadProfileBoard("users");
+}
 
+function activityCalendar(points) {
+  const days = 70;
+  const byDay = new Map();
+  points.forEach((p) => {
+    const key = new Date(p.created_at).toDateString();
+    const kind = /мероприят/i.test(p.reason) ? "site" : "lesson";
+    byDay.set(key, byDay.get(key) === "site" ? "site" : kind);
+  });
+
+  const cells = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const kind = byDay.get(d.toDateString()) || "";
+    cells.push(
+      `<div class="${kind}" title="${d.toLocaleDateString("ru-RU")}${kind ? (kind === "site" ? " — на площадке" : " — занятие на сайте") : ""}"></div>`
+    );
+  }
+  return cells.join("");
+}
+
+function bindVolunteerProfile(user, achievements) {
   const shareText = `Мой вклад в «Чистый берег»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
   const shareUrl = window.location.origin;
-  document.getElementById("share-vk").href = `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`;
-  document.getElementById("share-tg").href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+  document.getElementById("share-vk").href =
+    `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`;
+  document.getElementById("share-tg").href =
+    `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
 
-  document.querySelectorAll("[data-frame]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await api.post("/users/me/avatar-frame", { frame_code: btn.dataset.frame || null });
-      cachedUser = null;
-      initProfilePage();
-    });
+  document.getElementById("toggle-settings").addEventListener("click", (e) => {
+    const panel = document.getElementById("profile-settings");
+    panel.hidden = !panel.hidden;
+    e.target.textContent = panel.hidden ? "Показать настройки" : "Скрыть настройки";
   });
 
   document.getElementById("share-btn").addEventListener("click", async () => {
-    const text = `Мой вклад в «Чистый берег»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
     const statusEl = document.getElementById("share-status");
     if (navigator.share) {
       try {
-        await navigator.share({ text, url: window.location.origin });
+        await navigator.share({ text: shareText, url: shareUrl });
         return;
       } catch (e) {
         /* пользователь отменил — попробуем скопировать в буфер */
       }
     }
     try {
-      await navigator.clipboard.writeText(text);
-      toast("Текст скопирован в буфер обмена!", "success");
+      await navigator.clipboard.writeText(shareText);
+      statusEl.innerHTML = `<div class="note">Текст скопирован: «${escapeHtml(shareText)}»</div>`;
+      toast("Текст скопирован в буфер обмена", "success");
     } catch (e) {
-      statusEl.textContent = text;
+      statusEl.innerHTML = `<div class="note">${escapeHtml(shareText)}</div>`;
     }
   });
+
+  document.querySelectorAll("[data-frame]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      await api.post("/users/me/avatar-frame", { frame_code: btn.dataset.frame || null });
+      cachedUser = null;
+      initProfilePage();
+    })
+  );
 
   document.getElementById("gosuslugi-btn").addEventListener("click", async () => {
     const statusEl = document.getElementById("verify-status");
@@ -341,36 +327,120 @@ async function renderVolunteerProfile(user) {
     const teamId = e.target.value ? parseInt(e.target.value, 10) : null;
     try {
       await api.patch("/users/me", { team_id: teamId });
-      statusEl.textContent = "Команда обновлена!";
+      statusEl.textContent = "Команда обновлена.";
       cachedUser = null;
     } catch (err) {
       statusEl.textContent = err.message;
     }
   });
+
+  document.querySelectorAll("#board-scopes [data-scope]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      profileBoardScope = btn.dataset.scope;
+      document.querySelectorAll("#board-scopes [data-scope]").forEach((b) => b.classList.toggle("active", b === btn));
+      loadProfileBoard(profileBoardScope);
+    })
+  );
 }
 
-function bindLeaderboard() {
-  const buttons = document.querySelectorAll("[data-scope]");
-  buttons.forEach((btn) => btn.addEventListener("click", () => loadLeaderboard(btn.dataset.scope)));
-  loadLeaderboard("users");
-}
-
-async function loadLeaderboard(scope) {
+async function loadProfileBoard(scope) {
   const el = document.getElementById("leaderboard-table");
-  el.innerHTML = skeletonLines(4);
+  el.innerHTML = skeletonLines(5);
   try {
-    const rows = await api.get(`/leaderboard?scope=${scope}&limit=20`);
-    if (!rows.length) {
-      el.innerHTML = '<p class="muted">Пока пусто.</p>';
-      return;
-    }
-    el.innerHTML = `<table><tbody>${rows
-      .map(
-        (r, i) =>
-          `<tr><td>#${i + 1}</td><td>${escapeHtml(r.name)}${r.city ? " · " + escapeHtml(r.city) : ""}</td><td>${Math.round(r.points_total)} б.</td></tr>`
-      )
-      .join("")}</tbody></table>`;
+    const rows = await api.get(`/leaderboard?scope=${scope}&limit=10`);
+    el.innerHTML = rows.length
+      ? rows
+          .map(
+            (r, i) => `
+        <div class="board-line${scope === "users" && r.id === profileUser.id ? " me" : ""}">
+          <span class="rank">${String(i + 1).padStart(2, "0")}</span>
+          <span class="name">${escapeHtml(r.name)}</span>
+          <span class="city">${escapeHtml(r.city || r.region || "")}</span>
+          <span class="pts">${Math.round(r.points_total)}</span>
+        </div>`
+          )
+          .join("")
+      : '<p class="muted">Пока пусто.</p>';
   } catch (e) {
     el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
   }
+}
+
+/* --------------------------------------------------------- организатор --- */
+
+function renderOrganizerProfile(user) {
+  const org = user.organization;
+  document.getElementById("profile-root").innerHTML = `
+    <div class="profile-head">
+      ${avatarBox(user)}
+      <div>
+        <div class="kicker">Профиль организатора</div>
+        <h1>${escapeHtml(user.display_name)}</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+          <span class="tag tag-accent">${ROLE_LABELS[user.role]}</span>
+          ${org ? `<span class="tag tag-neutral">${escapeHtml(org.name)}</span>` : ""}
+        </div>
+        <p class="muted" style="font-size:14.5px;max-width:52ch;margin:0">
+          ${org ? `ИНН ${escapeHtml(org.inn)} · ${org.legal_type === "legal_entity" ? "юридическое лицо" : "ИП"}` : "Организация не указана."}
+        </p>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat"><span class="v">${org ? Math.round(org.points_total) : 0}</span><div class="k">баллов организации</div></div>
+      </div>
+    </div>
+
+    <div class="cells">
+      ${quickCell("ph-duotone ph-broom", "Мои мероприятия", "Создание мероприятий и заявки волонтёров", "/organizer")}
+      ${quickCell("ph-duotone ph-book-open-text", "Курсы", "Создание и отправка курсов на модерацию", "/lessons")}
+      ${quickCell("ph-duotone ph-camera", "Репорты", "Модерация находок волонтёров", "/reports")}
+    </div>
+
+    <h3 style="margin-top:44px">Аккаунт</h3>
+    <table class="table" style="max-width:520px">
+      <tbody>
+        <tr><td>Логин</td><td style="text-align:right"><strong>${escapeHtml(user.username)}</strong></td></tr>
+        <tr><td>Email</td><td style="text-align:right">${escapeHtml(user.email)} ${user.email_verified ? '<span class="tag tag-accent">подтверждён</span>' : '<span class="tag tag-neutral">не подтверждён</span>'}</td></tr>
+      </tbody>
+    </table>`;
+}
+
+/* -------------------------------------------------------------- админ ---- */
+
+function renderAdminProfile(user) {
+  document.getElementById("profile-root").innerHTML = `
+    <div class="profile-head">
+      ${avatarBox(user)}
+      <div>
+        <div class="kicker">Профиль администратора</div>
+        <h1>${escapeHtml(user.display_name)}</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+          <span class="tag tag-accent">${ROLE_LABELS[user.role]}</span>
+        </div>
+        <p class="muted" style="font-size:14.5px;max-width:52ch;margin:0">Модерация мероприятий и курсов, репорты и мониторинг фонда в Grafana.</p>
+      </div>
+      <div class="profile-stats"></div>
+    </div>
+
+    <div class="cells">
+      ${quickCell("ph-duotone ph-ticket", "Тикеты", "Модерация мероприятий и курсов", "/tickets")}
+      ${quickCell("ph-duotone ph-chart-line-up", "Мониторинг", "Дашборд фонда и Grafana", "/admin")}
+      ${quickCell("ph-duotone ph-camera", "Репорты", "Модерация находок волонтёров", "/reports")}
+    </div>
+
+    <h3 style="margin-top:44px">Аккаунт</h3>
+    <table class="table" style="max-width:520px">
+      <tbody>
+        <tr><td>Логин</td><td style="text-align:right"><strong>${escapeHtml(user.username)}</strong></td></tr>
+        <tr><td>Email</td><td style="text-align:right">${escapeHtml(user.email)}</td></tr>
+      </tbody>
+    </table>`;
+}
+
+function quickCell(icon, title, note, href) {
+  return `
+    <a href="${href}" style="text-decoration:none;color:inherit;display:block">
+      <i class="${icon}" style="font-size:24px;color:var(--color-accent)"></i>
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:17px;margin:8px 0 4px">${title}</div>
+      <div class="cell-note">${note}</div>
+    </a>`;
 }

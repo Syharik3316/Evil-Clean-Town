@@ -5,30 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Тикеты — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
-    <h1>Тикеты</h1>
-    <p class="lead">Модерация предложенных мероприятий и курсов. Репорты о мусоре модерируются на странице «Репорты».</p>
+  <nav class="topbar" id="app-nav"></nav>
 
-    <div style="display:flex; gap:8px; margin-bottom:14px">
-      <button class="btn" data-tab="events">Мероприятия</button>
-      <button class="btn secondary" data-tab="courses">Курсы</button>
+  <main class="wrap wrap-wide">
+    <div class="kicker">Модерация фонда</div>
+    <h1>Тикеты</h1>
+    <p class="lead">Предложенные организаторами мероприятия и курсы. Репорты о мусоре модерируются в разделе «Репорты».</p>
+
+    <div class="seg" style="margin-bottom:22px" id="ticket-tabs">
+      <button type="button" class="active" data-tab="events">Мероприятия</button>
+      <button type="button" data-tab="courses">Курсы</button>
     </div>
 
-    <div id="ticket-root">Загрузка…</div>
-  </div>
+    <div class="cols cols-side-wide">
+      <div id="ticket-root"></div>
+      <div class="stack">
+        <div>
+          <div class="micro" style="margin-bottom:10px">Точки мероприятий на карте</div>
+          <div class="ymap ymap-sm" id="tickets-map"></div>
+          <p class="muted" style="font-size:12px;margin-top:8px">Проверьте, что точка сбора совпадает с указанным адресом.</p>
+        </div>
+        <div class="panel-dark">
+          <div class="micro" style="margin-bottom:10px">Что проверять</div>
+          <p style="font-size:13px;line-height:1.55;margin:0">Название и описание без ошибок, дата в будущем, адрес совпадает с меткой на карте, для уборки выбран участок побережья. Мелкие правки можно внести кнопкой «Редактировать и принять».</p>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <div class="modal-backdrop" id="reason-modal" hidden>
     <div class="modal">
       <h2>Причина отклонения</h2>
       <form id="reason-form">
-        <div class="field"><label for="reason-text">Причина</label><textarea id="reason-text" rows="3" required></textarea></div>
-        <div style="display:flex; gap:8px">
-          <button class="btn danger" type="submit">Отклонить</button>
-          <button class="btn secondary" type="button" id="reason-cancel">Отмена</button>
+        <div class="field"><label for="reason-text">Причина</label><textarea class="input" id="reason-text" rows="3" required></textarea></div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" id="reason-cancel">Отмена</button>
+          <button class="btn btn-danger" type="submit">Отклонить</button>
         </div>
       </form>
     </div>
@@ -38,13 +54,13 @@
     <div class="modal">
       <h2>Редактировать перед публикацией</h2>
       <form id="edit-event-form">
-        <div class="field"><label for="edit-title">Название</label><input type="text" id="edit-title" required /></div>
-        <div class="field"><label for="edit-description">Описание</label><textarea id="edit-description" rows="3" required></textarea></div>
-        <div class="field" id="edit-address-field"><label for="edit-address">Адрес</label><input type="text" id="edit-address" /></div>
-        <div class="field" id="edit-region-field"><label for="edit-region">Регион</label><input type="text" id="edit-region" /></div>
-        <div style="display:flex; gap:8px">
-          <button class="btn" type="submit">Сохранить и опубликовать</button>
-          <button class="btn secondary" type="button" id="edit-event-cancel">Отмена</button>
+        <div class="field"><label for="edit-title">Название</label><input class="input" type="text" id="edit-title" required /></div>
+        <div class="field"><label for="edit-description">Описание</label><textarea class="input" id="edit-description" rows="3" required></textarea></div>
+        <div class="field" id="edit-address-field"><label for="edit-address">Адрес</label><input class="input" type="text" id="edit-address" /></div>
+        <div class="field" id="edit-region-field"><label for="edit-region">Регион</label><input class="input" type="text" id="edit-region" /></div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" id="edit-event-cancel">Отмена</button>
+          <button class="btn btn-primary" type="submit">Сохранить и опубликовать</button>
         </div>
       </form>
     </div>
@@ -52,9 +68,11 @@
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/yamaps.js"></script>
   <script src="/js/tickets.js"></script>
   <script>
     renderNav("/tickets");

@@ -5,29 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Лидерборд — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap">
+    <div class="kicker">Рейтинг сезона</div>
     <h1>Лидерборд</h1>
-    <p class="lead">Рейтинг участников и организаций «Чистого берега».</p>
+    <p class="lead">Баллы начисляются за пройденные уроки, подтверждённое участие в мероприятиях и принятые репорты о мусоре.</p>
 
-    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
-      <button class="btn" data-scope="users">Участники</button>
-      <button class="btn secondary" data-scope="organizations">Организации</button>
-      <button class="btn secondary" data-scope="teams">Команды/школы</button>
-    </div>
-    <div class="field" style="max-width:260px">
-      <label for="region-filter">Регион</label>
-      <input type="text" id="region-filter" placeholder="Например, Краснодарский край" />
-    </div>
+    <div class="cols cols-side">
+      <div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px">
+          <div class="seg" id="board-scopes">
+            <button type="button" class="active" data-scope="users">Участники</button>
+            <button type="button" data-scope="organizations">Организации</button>
+            <button type="button" data-scope="teams">Команды и школы</button>
+          </div>
+          <div class="field" style="max-width:260px;margin:0 0 0 auto;flex:1;min-width:200px">
+            <label for="region-filter">Регион</label>
+            <input class="input" type="text" id="region-filter" placeholder="Например, Краснодарский край" />
+          </div>
+        </div>
+        <div id="leaderboard-root"></div>
+      </div>
 
-    <div id="leaderboard-root" class="card">Загрузка…</div>
-  </div>
+      <div class="stack">
+        <div class="panel-dark">
+          <div class="micro" style="margin-bottom:10px">Как набирать баллы</div>
+          <div style="display:flex;flex-direction:column;gap:12px;font-size:13px">
+            <div style="display:flex;gap:10px"><i class="ph-duotone ph-book-open-text" style="font-size:18px;color:var(--color-accent-300)"></i><span>Пройденный модуль курса — +10 баллов</span></div>
+            <div style="display:flex;gap:10px"><i class="ph-duotone ph-broom" style="font-size:18px;color:var(--color-accent-300)"></i><span>Гео-чекин на уборке — до +25 баллов</span></div>
+            <div style="display:flex;gap:10px"><i class="ph-duotone ph-camera" style="font-size:18px;color:var(--color-accent-300)"></i><span>Принятый репорт о мусоре — +10 баллов</span></div>
+            <div style="display:flex;gap:10px"><i class="ph-duotone ph-medal" style="font-size:18px;color:var(--color-accent-300)"></i><span>Ачивки дают дополнительные баллы и рамку аватара</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="micro" style="margin-bottom:10px">Командный зачёт</div>
+          <p class="muted" style="font-size:13px;line-height:1.55;margin:0">Баллы участника автоматически идут в копилку его команды или школы. Команду можно выбрать в профиле.</p>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>

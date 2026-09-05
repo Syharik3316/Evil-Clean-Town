@@ -3,22 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Админ-панель — Чистый берег</title>
+  <title>Мониторинг фонда — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
-    <div id="admin-root">Загрузка…</div>
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap wrap-wide">
+    <div id="admin-root">
+      <div class="skeleton skeleton-line-short"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="reason-modal" hidden>
+    <div class="modal">
+      <h2>Причина отклонения</h2>
+      <form id="reason-form">
+        <div class="field"><label for="reason-text">Причина</label><textarea class="input" id="reason-text" rows="3" required></textarea></div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" type="button" id="reason-cancel">Отмена</button>
+          <button class="btn btn-danger" type="submit">Отклонить</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
-  <script src="/js/config.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/yamaps.js"></script>
   <script src="/js/admin.js"></script>
   <script>
     renderNav("/admin");

@@ -7,7 +7,7 @@ if ("serviceWorker" in navigator) {
 const NAV_LINKS_BY_ROLE = {
   guest: [
     ["/index", "Главная"],
-    ["/map", "Карта"],
+    ["/map", "Карта ДЗЗ"],
     ["/lessons", "Уроки"],
     ["/events", "Мероприятия"],
     ["/reports", "Репорты"],
@@ -15,7 +15,7 @@ const NAV_LINKS_BY_ROLE = {
   ],
   volunteer: [
     ["/index", "Главная"],
-    ["/map", "Карта"],
+    ["/map", "Карта ДЗЗ"],
     ["/lessons", "Уроки"],
     ["/events", "Мероприятия"],
     ["/reports", "Репорты"],
@@ -23,17 +23,19 @@ const NAV_LINKS_BY_ROLE = {
   ],
   organizer: [
     ["/index", "Главная"],
-    ["/map", "Карта"],
+    ["/map", "Карта ДЗЗ"],
     ["/lessons", "Курсы"],
+    ["/events", "Мероприятия"],
     ["/organizer", "Мои мероприятия"],
     ["/reports", "Репорты"],
     ["/leaderboard", "Лидерборд"],
   ],
   admin: [
     ["/index", "Главная"],
-    ["/map", "Карта"],
+    ["/map", "Карта ДЗЗ"],
+    ["/events", "Мероприятия"],
     ["/tickets", "Тикеты"],
-    ["/admin", "Статистика"],
+    ["/admin", "Мониторинг"],
     ["/reports", "Репорты"],
     ["/leaderboard", "Лидерборд"],
   ],
@@ -51,42 +53,44 @@ async function renderNav(activePage) {
   const links = NAV_LINKS_BY_ROLE[user ? user.role : "guest"] || NAV_LINKS_BY_ROLE.guest;
 
   const linkHtml = links
-    .map(
-      ([href, label]) =>
-        `<a class="nav-link${activePage === href ? " active" : ""}" href="${href}">${label}</a>`
-    )
+    .map(([href, label]) => `<a href="${href}"${activePage === href ? ' class="active"' : ""}>${label}</a>`)
     .join("");
 
   let authHtml;
   if (user) {
     authHtml = `
-      <span class="dropdown nav-bell-wrap">
-        <button class="nav-link" id="nav-bell" type="button" aria-haspopup="true" aria-expanded="false">🔔<span id="nav-unread-badge" class="nav-badge" hidden></span></button>
+      <span class="dropdown">
+        <button id="nav-bell" type="button" aria-haspopup="true" aria-expanded="false" title="Уведомления">
+          <i class="ph-duotone ph-bell" style="font-size:17px"></i><span id="nav-unread-badge" class="nav-badge" hidden></span>
+        </button>
         <div class="dropdown-panel" id="nav-notif-panel">
           <div class="dropdown-panel-header">
             <span>Уведомления</span>
-            <button class="btn secondary" id="nav-mark-all-read" style="padding:2px 8px; font-size:0.78rem">Прочитать все</button>
+            <button class="btn btn-secondary btn-sm" id="nav-mark-all-read" style="padding:3px 9px;font-size:11px">Прочитать все</button>
           </div>
-          <div class="dropdown-panel-body" id="nav-notif-body"><p class="muted" style="padding:10px 0">Загрузка…</p></div>
+          <div class="dropdown-panel-body" id="nav-notif-body">${skeletonLines(3)}</div>
           <div class="dropdown-panel-footer"><a href="/notifications">Показать все →</a></div>
         </div>
       </span>
-      <a class="nav-link${activePage === "/profile" ? " active" : ""}" href="/profile">${escapeHtml(user.display_name)}</a>
+      <a href="/profile"${activePage === "/profile" ? ' class="active"' : ""}>${escapeHtml(user.display_name)}</a>
       <span class="points-pill">${Math.round(user.points_total)} б.</span>
-      <a class="nav-link" href="#" id="nav-logout">Выйти</a>
+      <a href="#" id="nav-logout" title="Выйти"><i class="ph-duotone ph-sign-out" style="font-size:16px"></i></a>
     `;
   } else {
     authHtml = `
-      <a class="nav-link${activePage === "/login" ? " active" : ""}" href="/login">Войти</a>
-      <a class="nav-link${activePage === "/register" ? " active" : ""}" href="/register">Регистрация</a>
+      <a href="/login"${activePage === "/login" ? ' class="active"' : ""}>Войти</a>
+      <a href="/register"${activePage === "/register" ? ' class="active"' : ""}>Регистрация</a>
     `;
   }
 
   mount.innerHTML = `
-    <div class="nav-inner">
-      <a class="nav-brand" href="/index"><img src="/logo.png" alt="GoodWill" class="brand-logo" /></a>
-      ${linkHtml}
-      ${authHtml}
+    <div class="topbar-inner">
+      <a class="topbar-brand" href="/index">
+        <strong>Чистый берег</strong>
+        <span>Orbital view</span>
+      </a>
+      <div class="topbar-links">${linkHtml}</div>
+      <div class="topbar-links topbar-auth">${authHtml}</div>
     </div>
   `;
 
@@ -111,7 +115,7 @@ async function initNotificationBell() {
   const badge = document.getElementById("nav-unread-badge");
   if (!trigger || !panel) return;
 
-  const dropdown = initDropdown(trigger, panel);
+  initDropdown(trigger, panel);
   let loaded = false;
 
   async function loadPanel() {
@@ -122,16 +126,16 @@ async function initNotificationBell() {
         ? notifications
             .map(
               (n) => `
-              <div class="notification-item${n.read_at ? "" : " unread"}" id="nav-notif-${n.id}" style="cursor:default">
-                <strong style="font-size:0.9rem">${escapeHtml(n.title)}</strong>
-                ${n.body ? `<p class="muted" style="margin:2px 0">${escapeHtml(n.body)}</p>` : ""}
-                <p class="muted" style="margin:2px 0 0">${formatDate(n.created_at)}</p>
+              <div class="notification-item${n.read_at ? "" : " unread"}">
+                <strong style="font-size:13.5px">${escapeHtml(n.title)}</strong>
+                ${n.body ? `<p class="muted" style="margin:2px 0;font-size:12.5px">${escapeHtml(n.body)}</p>` : ""}
+                <p class="muted" style="margin:2px 0 0;font-size:11.5px">${formatDate(n.created_at)}</p>
               </div>`
             )
             .join("")
-        : '<p class="muted" style="padding:10px 0">Уведомлений пока нет.</p>';
+        : '<p class="muted" style="padding:14px 0;font-size:13px">Уведомлений пока нет.</p>';
     } catch (e) {
-      body.innerHTML = '<p class="muted" style="padding:10px 0">Не удалось загрузить уведомления.</p>';
+      body.innerHTML = '<p class="muted" style="padding:14px 0;font-size:13px">Не удалось загрузить уведомления.</p>';
     }
   }
 
@@ -167,11 +171,21 @@ function renderFooter() {
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-top">
-          <img src="logo.png" alt="GoodWill" class="footer-logo" />
-          <a class="btn secondary" href="mailto:admin@syharik.ru">Связаться с нами</a>
+          <span class="brand">Чистый берег</span>
+          <img src="/logo.png" alt="GoodWill" class="footer-logo" />
+          <span class="spacer"></span>
+          <a class="btn btn-on-dark btn-sm" href="mailto:admin@syharik.ru">Связаться с нами</a>
         </div>
         <p>© 2026 GoodWill. Все права защищены. e-mail: <a href="mailto:admin@syharik.ru">admin@syharik.ru</a></p>
         <p>Проект разработан на хакатоне КосмоХакатон 2026 командой «Злая IT клиника» по мотивам кейса компании «СР Дата».</p>
+        <div class="footer-partners">
+          <span>Фонд защитников природы</span>
+          <span>СР Дата — данные ДЗЗ</span>
+          <span>Яндекс.Облако — инфраструктура</span>
+          <span>Яндекс.Карты — картография</span>
+          <span class="spacer"></span>
+          <span>Демо-датасет снимков · PWA · 2026</span>
+        </div>
       </div>
     </footer>
   `;

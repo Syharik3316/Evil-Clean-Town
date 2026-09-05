@@ -3,37 +3,87 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Карта — Чистый берег</title>
+  <title>Карта ДЗЗ — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
-    <h1>Карта побережья</h1>
-    <p class="lead">Спутниковые снимки конкретных участков берега. Демо-датасет — снимки сгенерированы для наглядности слайдера «до/после».</p>
+  <nav class="topbar" id="app-nav"></nav>
 
-    <div class="card">
-      <div class="field">
-        <label for="site-select">Участок берега</label>
-        <select id="site-select"></select>
+  <main class="wrap wrap-wide">
+    <div class="page-head">
+      <div>
+        <div class="kicker">Карта ДЗЗ · слайдер «до/после»</div>
+        <h1 id="site-name">Загрузка…</h1>
+        <p class="muted" style="font-size:14.5px;margin:0" id="site-sub"></p>
       </div>
-      <div id="map"></div>
-      <div class="slider-wrap">
-        <label id="slider-label" class="muted">Загрузка слоёв…</label>
-        <input type="range" id="layer-slider" min="0" max="1" value="0" step="1" />
-      </div>
-      <p id="site-description" class="muted"></p>
+      <div class="spacer seg" id="site-passes" style="border:1px solid var(--color-divider)"></div>
     </div>
-  </div>
+
+    <div class="cols" style="grid-template-columns:minmax(0,1fr) 292px">
+      <div>
+        <div class="compare" id="compare">
+          <img id="cmp-after" alt="Снимок после уборки" />
+          <div class="before-clip" id="cmp-clip"><img id="cmp-before" alt="Снимок до уборки" /></div>
+          <div class="handle" id="cmp-handle"></div>
+          <span class="compare-chip left" id="cmp-label-before">До</span>
+          <span class="compare-chip right" id="cmp-label-after">После</span>
+          <span class="compare-source"><i class="ph-duotone ph-crosshair" style="font-size:15px"></i>Sentinel-2 L2A · 10 м/пиксель</span>
+        </div>
+        <div class="compare-scrub">
+          <span>До</span>
+          <input type="range" id="cmp-range" min="0" max="100" value="52" aria-label="Слайдер «до/после»" />
+          <span>После</span>
+        </div>
+
+        <div class="cells" style="margin-top:26px" id="site-metrics"></div>
+
+        <h3 style="margin:34px 0 10px">Участок на Яндекс.Карте</h3>
+        <p class="muted" style="font-size:13.5px;margin:0 0 14px">Снимок ДЗЗ наложен на карту по географическим границам участка. Прозрачность снимка регулируется ползунком.</p>
+        <div class="ymap ymap-lg" id="dzz-map"></div>
+        <div class="ymap-legend">
+          <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:220px">
+            Прозрачность снимка
+            <input type="range" id="overlay-opacity" min="0" max="100" value="85" style="max-width:200px" />
+          </span>
+          <span id="overlay-layer-label" class="muted"></span>
+        </div>
+
+        <h3 style="margin:34px 0 10px">Что видно на этом снимке</h3>
+        <p class="muted" style="font-size:14.5px;line-height:1.55;max-width:66ch;margin:0" id="site-description"></p>
+      </div>
+
+      <div class="stack">
+        <div>
+          <div class="micro" style="margin-bottom:10px">Участок берега</div>
+          <div id="site-list"></div>
+        </div>
+        <div>
+          <div class="micro" style="margin-bottom:10px">Слой</div>
+          <div id="layer-list" style="display:flex;flex-direction:column;gap:1px;background:var(--color-divider);border:1px solid var(--color-divider)"></div>
+        </div>
+        <div>
+          <div class="micro" style="margin-bottom:10px">Съёмки участка</div>
+          <div id="shot-list"></div>
+        </div>
+        <div class="panel-dark">
+          <div class="micro" style="margin-bottom:8px">Следующий виток</div>
+          <div style="font-family:var(--font-heading);font-weight:600;font-size:22px;margin-bottom:6px" id="next-pass">—</div>
+          <p style="font-size:12.5px;line-height:1.5;margin:0 0 14px">Если снимок выйдет чистым, индексы участка обновятся к вечеру того же дня.</p>
+          <a class="btn btn-primary btn-block" href="/events">Найти уборку на этом участке</a>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <div id="app-footer"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/yamaps.js"></script>
   <script src="/js/map.js"></script>
   <script>
     renderNav("/map");

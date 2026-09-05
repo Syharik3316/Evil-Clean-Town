@@ -5,20 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Уведомления — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
-    <h1>Уведомления</h1>
-    <div style="margin-bottom:12px">
-      <button class="btn secondary" id="mark-all-read-btn">Отметить все прочитанными</button>
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap wrap-narrow">
+    <div class="page-head">
+      <div>
+        <div class="kicker">Лента событий</div>
+        <h1>Уведомления</h1>
+        <p class="muted" style="font-size:14.5px;margin:0">Решения по заявкам, модерация репортов и начисленные баллы.</p>
+      </div>
+      <button class="btn btn-secondary spacer" id="mark-all-read-btn">Отметить все прочитанными</button>
     </div>
-    <div id="notifications-root" class="card">Загрузка…</div>
-  </div>
+
+    <div id="notifications-root"></div>
+  </main>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>

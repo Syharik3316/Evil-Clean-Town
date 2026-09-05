@@ -5,19 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Мероприятия — Чистый берег</title>
   <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
-  <div class="container">
+  <nav class="topbar" id="app-nav"></nav>
+
+  <main class="wrap">
+    <div class="kicker kicker-2">Календарь мероприятий</div>
     <h1>Мероприятия</h1>
     <p class="lead">Уборки, вебинары и эко-квесты. Подай заявку, дождись одобрения организатора, а на месте подтверди участие гео-чекином — так начисляются баллы.</p>
 
-    <div id="events-root" class="grid">Загрузка…</div>
-  </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <div class="seg" id="event-filters">
+        <button type="button" class="active" data-filter="all">Все</button>
+        <button type="button" data-filter="cleanup">Уборки</button>
+        <button type="button" data-filter="webinar">Вебинары</button>
+        <button type="button" data-filter="quest">Квесты</button>
+      </div>
+      <span class="muted" style="font-size:12.5px;margin-left:auto" id="events-count"></span>
+    </div>
+
+    <div class="cols cols-side">
+      <div id="events-root"></div>
+
+      <div class="stack">
+        <div style="border-top:1px solid var(--color-divider);padding-top:16px">
+          <div class="micro" style="margin-bottom:14px">Как работает гео-чекин</div>
+          <div class="checkin-step">
+            <i class="ph-duotone ph-note-pencil"></i>
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:14px;margin-bottom:2px">Подайте заявку</div>
+              <div class="muted" style="font-size:12.5px;line-height:1.45">Организатор подтверждает участие заранее — так он знает, сколько людей приедет.</div>
+            </div>
+          </div>
+          <div class="checkin-step">
+            <i class="ph-duotone ph-crosshair"></i>
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:14px;margin-bottom:2px">Приходите на место</div>
+              <div class="muted" style="font-size:12.5px;line-height:1.45">На странице мероприятия видно точку сбора на Яндекс.Карте и расстояние до неё.</div>
+            </div>
+          </div>
+          <div class="checkin-step">
+            <i class="ph-duotone ph-medal"></i>
+            <div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:14px;margin-bottom:2px">Подтвердите участие</div>
+              <div class="muted" style="font-size:12.5px;line-height:1.45">Чекин работает в радиусе площадки — баллы и ачивка начисляются сразу.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-dark" id="my-registrations">
+          <div class="micro" style="margin-bottom:10px">Мои регистрации</div>
+          <p style="font-size:12.5px;margin:0">Войдите, чтобы видеть свои заявки и чекины.</p>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>

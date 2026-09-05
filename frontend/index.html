@@ -3,125 +3,174 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Чистый берег</title>
+  <title>Чистый берег — твой берег глазами спутника</title>
+  <meta name="description" content="Спутниковый экомониторинг побережья: снимки «до/после», уроки о ДЗЗ, уборки с гео-чекином и репорты о мусоре." />
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0f8b6c" />
+  <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="nav"><div id="app-nav"></div></nav>
+  <nav class="topbar" id="app-nav"></nav>
 
-  <div class="container">
-    <div class="hero">
-      <h1>Твой берег глазами спутника</h1>
-      <p>Смотри «до/после» уборок на спутниковых снимках, проходи короткие уроки об экомониторинге,
-         участвуй в реальных уборках побережья и сообщай о найденном мусоре.</p>
-      <a class="btn" href="/map" style="background:#fff;color:var(--primary-dark)">Смотреть карту</a>
-    </div>
+  <main>
+    <section class="hero">
+      <div class="hero-glow-1"></div>
+      <div class="hero-glow-2"></div>
+      <div class="hero-stars"></div>
+      <div class="hero-ring-1"></div>
+      <div class="hero-ring-2"></div>
+
+      <div class="satsys" aria-hidden="true">
+        <div class="anchor">
+          <div class="orbit orbit-1"><span></span></div>
+          <div class="orbit orbit-2"><span></span></div>
+          <div class="orbit orbit-3"><span></span></div>
+        </div>
+        <picture>
+          <source srcset="/assets/satellite.webp" type="image/webp" />
+          <img src="/assets/satellite.png" alt="" />
+        </picture>
+      </div>
+
+      <div class="hero-inner">
+        <div class="hero-eyebrow"><span class="dot"></span>Фонд защитников природы · СР Дата · Яндекс.Облако</div>
+        <h1>Твой берег глазами спутника</h1>
+        <p class="hero-sub">Смотри «до/после» уборок на спутниковых снимках, проходи короткие уроки об экомониторинге, участвуй в реальных уборках побережья и сообщай о найденном мусоре.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="/map">Смотреть карту</a>
+          <a class="btn btn-on-dark btn-lg" href="/lessons">Пройти урок за 5 минут</a>
+        </div>
+
+        <div class="telemetry">
+          <div><div class="k">Источник</div><div class="v">Sentinel-2 L2A</div></div>
+          <div><div class="k">Виток</div><div class="v">№ 12 878</div></div>
+          <div><div class="k">Съёмка</div><div class="v" id="tm-shot">—</div></div>
+          <div><div class="k">Облачность</div><div class="v">4 %</div></div>
+          <div><div class="k">NDVI, Δ за сезон</div><div class="v">+0.08</div></div>
+        </div>
+      </div>
+
+      <div class="hero-curve"></div>
+    </section>
 
     <div id="greeting-strip-root"></div>
 
-    <div class="grid">
-      <div class="card">
-        <h2 style="margin-top:0">🛰️ Карта ДЗЗ</h2>
-        <p class="muted">Слайдер «до/после» на реальных участках побережья по спутниковым данным.</p>
-        <a href="/map">Открыть карту →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📘 Уроки</h2>
-        <p class="muted">5 минут — и ты понимаешь, как читать спутниковый снимок и зачем нужен мониторинг.</p>
-        <a href="/lessons">Начать учиться →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">🧹 Мероприятия</h2>
-        <p class="muted">Уборки, вебинары и квесты рядом с тобой — с гео-чекином и баллами за участие.</p>
-        <a href="/events">Посмотреть календарь →</a>
-      </div>
-      <div class="card">
-        <h2 style="margin-top:0">📸 Репорты о мусоре</h2>
-        <p class="muted">Нашёл замусоренный участок — сфотографируй и отправь, это тоже citizen science.</p>
-        <a href="/reports">Отправить репорт →</a>
-      </div>
-    </div>
+    <section class="section" style="padding-top:64px">
+      <p class="statement">«Чистый берег» показывает твоему городу его настоящий берег глазами спутника, учит понимать эти данные за 5 минут и помогает найти уборку рядом с тобой.</p>
+      <p class="muted" style="font-size:13px;margin:0">Пилот сезона 2026: три участка побережья, 14 школ и эко-клубов. Индексы ДЗЗ ниже — демонстрационные.</p>
+    </section>
 
-    <h2>Лидерборд</h2>
-    <div id="leaderboard-preview" class="card">Загрузка…</div>
-  </div>
+    <section class="section section-tight">
+      <div class="bignums" id="landing-stats">
+        <div><span class="bignum-v">—</span><div class="bignum-k">участка побережья</div><div class="bignum-note">снимки «до/после» за сезон</div></div>
+        <div><span class="bignum-v">1 340</span><div class="bignum-k">кг мусора вывезено</div><div class="bignum-note">по отчётам организаторов 48 уборок</div></div>
+        <div><span class="bignum-v">—</span><div class="bignum-k">волонтёров в рейтинге</div><div class="bignum-note">баллы за уроки, чекины и репорты</div></div>
+        <div><span class="bignum-v">6 мин</span><div class="bignum-k">средний урок</div><div class="bignum-note">модули с квизом, +10 баллов за каждый</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="kicker">От снимка к решению</div>
+      <h2 style="max-width:26ch">Путь данных: с орбиты до мешка мусора</h2>
+      <p class="lead" style="max-width:58ch;margin-bottom:44px">Спутник делает снимок, алгоритмы выделяют аномалии, фонд и волонтёры получают список приоритетных участков — и на берег выезжает уборка. Люди на местах уточняют данные там, где снимок неточен.</p>
+
+      <div class="flow">
+        <div class="flow-line"></div>
+        <div class="flow-runner"></div>
+        <div class="flow-grid">
+          <div>
+            <div class="flow-badge-wrap"><div class="flow-badge"><i class="ph-duotone ph-satellite"></i><span class="step">Шаг 01</span></div></div>
+            <div style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.22;margin-bottom:7px">Спутник делает снимок</div>
+            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 0 10px">Sentinel-2 проходит над участком каждые 5 дней и снимает берег в видимых и невидимых диапазонах.</p>
+            <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-2-700)">10 м/пиксель</div>
+          </div>
+          <div>
+            <div class="flow-badge-wrap"><div class="flow-badge"><i class="ph-duotone ph-scan"></i><span class="step">Шаг 02</span></div></div>
+            <div style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.22;margin-bottom:7px">Алгоритмы выделяют аномалии</div>
+            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 0 10px">NDVI, индекс мутности воды и смещение береговой линии сравниваются с прошлой съёмкой.</p>
+            <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-2-700)">3 индекса</div>
+          </div>
+          <div>
+            <div class="flow-badge-wrap"><div class="flow-badge"><i class="ph-duotone ph-list-checks"></i><span class="step">Шаг 03</span></div></div>
+            <div style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.22;margin-bottom:7px">Список приоритетных участков</div>
+            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 0 10px">Фонд и организаторы получают очередь: где мусора больше и куда везти волонтёров в первую очередь.</p>
+            <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-2-700)">обновление раз в неделю</div>
+          </div>
+          <div>
+            <div class="flow-badge-wrap"><div class="flow-badge"><i class="ph-duotone ph-hand-heart"></i><span class="step">Шаг 04</span></div></div>
+            <div style="font-family:var(--font-heading);font-weight:600;font-size:19px;line-height:1.22;margin-bottom:7px">Организуется уборка</div>
+            <p class="muted" style="font-size:13.5px;line-height:1.5;margin:0 0 10px">Мероприятие в календаре, гео-чекин на месте, фото мусора от участников — и снимок «после» через 3 дня.</p>
+            <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-accent-2-700)">+25 баллов за чекин</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="page-head" style="margin-bottom:34px">
+        <div>
+          <div class="kicker">Участки под наблюдением</div>
+          <h2 style="margin:0;max-width:24ch">Берега, снятые дважды</h2>
+        </div>
+        <a class="btn btn-secondary spacer" href="/map">Открыть карту со слайдером</a>
+      </div>
+      <div class="cols cols-half" id="landing-sites"></div>
+    </section>
+
+    <section class="section">
+      <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:56px">
+        <div>
+          <div class="kicker">Обучающие модули</div>
+          <h2 style="max-width:22ch">Пять минут — и снимок читается</h2>
+          <p class="lead" style="max-width:44ch;margin-bottom:22px">Короткие уроки о том, как устроен экомониторинг побережья. В конце каждого — квиз и баллы в профиль.</p>
+          <a class="btn btn-primary" href="/lessons">Начать с первого урока</a>
+        </div>
+        <div id="landing-lessons"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="page-head" style="margin-bottom:30px">
+        <div>
+          <div class="kicker kicker-2">Ближайшие мероприятия</div>
+          <h2 style="margin:0">Уборки, вебинары и квесты</h2>
+        </div>
+        <a class="btn btn-secondary spacer" href="/events">Весь календарь</a>
+      </div>
+      <div class="event-cells" id="landing-events"></div>
+    </section>
+
+    <section class="cta">
+      <div class="cta-inner">
+        <div class="cta-grid">
+          <div>
+            <h2 style="max-width:20ch;color:#f3f2f2">Твой вклад виден с орбиты</h2>
+            <p style="font-size:15px;line-height:1.5;color:rgba(243,242,242,.78);max-width:40ch;margin:0 0 22px">Заведи профиль, набирай баллы за уроки, чекины и репорты — и подними свою школу в рейтинге сезона.</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <a class="btn btn-primary" href="/register">Создать профиль</a>
+              <a class="btn btn-on-dark" href="/reports">Отправить репорт о мусоре</a>
+            </div>
+          </div>
+          <div>
+            <div class="micro" style="color:rgba(203,238,255,.65);margin-bottom:12px">Лидерборд сезона · команды и школы</div>
+            <div id="landing-board"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <div id="app-footer"></div>
 
+  <script src="/js/config.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/landing.js"></script>
   <script>
     renderNav("/index");
     renderFooter();
-    renderGreetingStrip();
-
-    (async () => {
-      const el = document.getElementById("leaderboard-preview");
-      try {
-        const top = await api.get("/leaderboard?scope=users&limit=5");
-        if (!top.length) {
-          el.innerHTML = '<p class="muted">Пока никто не набрал баллов — стань первым!</p>';
-          return;
-        }
-        el.innerHTML = `<table><tbody>${top
-          .map(
-            (u, i) =>
-              `<tr><td>#${i + 1}</td><td>${escapeHtml(u.name)}</td><td>${Math.round(u.points_total)} б.</td></tr>`
-          )
-          .join("")}</tbody></table>`;
-      } catch (e) {
-        el.innerHTML = '<p class="muted">Не удалось загрузить лидерборд.</p>';
-      }
-    })();
-
-    async function renderGreetingStrip() {
-      const root = document.getElementById("greeting-strip-root");
-      if (!isLoggedIn()) return;
-      const user = await currentUser();
-      if (!user) return;
-
-      try {
-        if (user.role === "volunteer") {
-          root.innerHTML = `
-            <div class="greeting-strip">
-              <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! 🔥 ${user.current_streak} дней подряд · <strong>${Math.round(user.points_total)}</strong> баллов</p>
-              <a class="btn secondary" href="/profile">Мой профиль</a>
-            </div>`;
-        } else if (user.role === "organizer") {
-          const events = await api.get("/events?mine_only=true");
-          let pending = 0;
-          for (const ev of events.slice(0, 20)) {
-            try {
-              const applicants = await api.get(`/events/${ev.id}/applicants`);
-              pending += applicants.filter((a) => a.status === "pending").length;
-            } catch (e) {
-              /* пропускаем недоступное мероприятие */
-            }
-          }
-          root.innerHTML = `
-            <div class="greeting-strip">
-              <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! У вас ${events.length} мероприятий, ${pending} заявок ждут решения</p>
-              <a class="btn secondary" href="/organizer">Мои мероприятия</a>
-            </div>`;
-        } else if (user.role === "admin") {
-          const [eventsTickets, courseTickets, pendingReports] = await Promise.all([
-            api.get("/admin/tickets/events"),
-            api.get("/admin/tickets/courses"),
-            api.get("/reports?status_filter=pending"),
-          ]);
-          root.innerHTML = `
-            <div class="greeting-strip">
-              <p>Привет, <strong>${escapeHtml(user.display_name)}</strong>! На модерации: ${eventsTickets.length} мероприятий · ${courseTickets.length} курсов · ${pendingReports.length} репортов</p>
-              <a class="btn secondary" href="/tickets">Тикеты</a>
-            </div>`;
-        }
-      } catch (e) {
-        /* тихо игнорируем — плашка необязательна для главной страницы */
-      }
-    }
+    initLandingPage();
   </script>
 </body>
 </html>
