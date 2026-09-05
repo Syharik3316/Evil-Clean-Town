@@ -5,9 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.models.mixins import utcnow
-from app.models.notification import Notification, PushSubscription
+from app.models.notification import FcmDevice, Notification, PushSubscription
 from app.models.user import User
-from app.schemas.notification import NotificationOut, PushSubscriptionCreate, PushUnsubscribeRequest
+from app.schemas.notification import (
+    FcmTokenRegister,
+    FcmTokenUnregister,
+    NotificationOut,
+    PushSubscriptionCreate,
+    PushUnsubscribeRequest,
+)
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -106,4 +112,28 @@ async def push_unsubscribe(
             PushSubscription.endpoint == payload.endpoint, PushSubscription.user_id == user.id
         )
     )
+    await db.commit()
+
+
+@router.post("/push/fcm/register", status_code=status.HTTP_204_NO_CONTENT)
+async def fcm_register(
+    payload: FcmTokenRegister, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Регистрация токена устройства из мобильного приложения (Capacitor,
+    @capacitor/push-notifications, событие 'registration'). См. app/services/push.py."""
+    existing = await db.execute(select(FcmDevice).where(FcmDevice.token == payload.token))
+    device = existing.scalar_one_or_none()
+    if device is None:
+        db.add(FcmDevice(user_id=user.id, token=payload.token))
+    else:
+        # то же устройство могло переустановить приложение под другим пользователем
+        device.user_id = user.id
+    await db.commit()
+
+
+@router.post("/push/fcm/unregister", status_code=status.HTTP_204_NO_CONTENT)
+async def fcm_unregister(
+    payload: FcmTokenUnregister, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    await db.execute(delete(FcmDevice).where(FcmDevice.token == payload.token, FcmDevice.user_id == user.id))
     await db.commit()

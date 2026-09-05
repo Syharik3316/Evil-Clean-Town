@@ -16,6 +16,19 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function getPushAvailability() {
+  if (isNativeApp()) {
+    const PushNotifications = getPushNotificationsPlugin();
+    if (!PushNotifications) return { supported: false };
+    try {
+      const { receive } = await PushNotifications.checkPermissions();
+      if (receive === "denied") return { supported: true, native: true, blocked: true };
+      if (receive === "granted") return { supported: true, native: true, subscribed: true };
+      return { supported: true, native: true };
+    } catch (e) {
+      return { supported: false };
+    }
+  }
+
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") {
     return { supported: false };
   }
@@ -51,6 +64,84 @@ async function enablePushNotifications(publicKey) {
     });
   }
   await api.post("/notifications/push/subscribe", sub.toJSON());
+}
+
+/* ------------------------------------- Push внутри Android-приложения (FCM) --- */
+/* Capacitor вкладывает мост window.Capacitor.Plugins прямо в эту страницу, даже
+   при загрузке с реального домена (см. server.url в capacitor.config.json), поэтому
+   тот же сайт может напрямую звать нативные плагины, если запущен внутри приложения. */
+
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+function getPushNotificationsPlugin() {
+  return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+}
+
+let _nativePushResolve = null;
+let _nativePushReject = null;
+let _nativePushListenersReady = false;
+
+function setupNativePushListeners() {
+  const PushNotifications = getPushNotificationsPlugin();
+  if (!PushNotifications || _nativePushListenersReady) return;
+  _nativePushListenersReady = true;
+
+  PushNotifications.addListener("registration", async (token) => {
+    try {
+      await api.post("/notifications/push/fcm/register", { token: token.value });
+      if (_nativePushResolve) _nativePushResolve();
+    } catch (err) {
+      if (_nativePushReject) _nativePushReject(err);
+    }
+    _nativePushResolve = null;
+    _nativePushReject = null;
+  });
+
+  PushNotifications.addListener("registrationError", () => {
+    if (_nativePushReject) _nativePushReject(new Error("Не удалось получить токен устройства"));
+    _nativePushResolve = null;
+    _nativePushReject = null;
+  });
+
+  // Тап по системному уведомлению (в том числе когда приложение было полностью
+  // закрыто) — открываем тот же экран, куда ведёт клик по уведомлению на сайте.
+  PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+    const url = action.notification && action.notification.data && action.notification.data.url;
+    if (url) window.location.href = url;
+  });
+}
+
+async function enableNativePush() {
+  const PushNotifications = getPushNotificationsPlugin();
+  const permStatus = await PushNotifications.requestPermissions();
+  if (permStatus.receive !== "granted") throw new Error("Уведомления не разрешены в системе");
+
+  setupNativePushListeners();
+  await new Promise((resolve, reject) => {
+    _nativePushResolve = resolve;
+    _nativePushReject = reject;
+    PushNotifications.register();
+  });
+}
+
+// Если разрешение уже выдавалось раньше (не первый запуск), тихо освежаем токен —
+// он может смениться (переустановка, смена Firebase-инстанса) — без повторного запроса.
+if (isNativeApp() && isLoggedIn()) {
+  (async () => {
+    const PushNotifications = getPushNotificationsPlugin();
+    if (!PushNotifications) return;
+    try {
+      const { receive } = await PushNotifications.checkPermissions();
+      if (receive === "granted") {
+        setupNativePushListeners();
+        PushNotifications.register();
+      }
+    } catch (e) {
+      /* тихо игнорируем — просто не освежаем токен в этот раз */
+    }
+  })();
 }
 
 const NAV_LINKS_BY_ROLE = {
@@ -220,18 +311,30 @@ async function initNotificationBell() {
   if (pushRow && pushBtn) {
     try {
       const availability = await getPushAvailability();
-      if (availability.supported && availability.configured && !availability.subscribed) {
+      const canOffer =
+        availability.supported &&
+        !availability.blocked &&
+        !availability.subscribed &&
+        (availability.native || availability.configured);
+      const label = availability.native ? "Включить уведомления на телефоне" : "Включить уведомления на компьютере";
+
+      if (canOffer) {
+        pushBtn.textContent = label;
         pushRow.hidden = false;
         pushBtn.addEventListener("click", async () => {
           pushBtn.disabled = true;
           pushBtn.textContent = "Включаем…";
           try {
-            await enablePushNotifications(availability.publicKey);
+            if (availability.native) {
+              await enableNativePush();
+            } else {
+              await enablePushNotifications(availability.publicKey);
+            }
             pushRow.hidden = true;
             toast("Уведомления включены", "success");
           } catch (err) {
             pushBtn.disabled = false;
-            pushBtn.textContent = "Включить уведомления на компьютере";
+            pushBtn.textContent = label;
             toast(err.message, "error");
           }
         });

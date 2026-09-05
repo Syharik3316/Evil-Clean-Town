@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@syharik.ru"
 
+    # Firebase Cloud Messaging (пуши в мобильное приложение Capacitor/Android — в отличие
+    # от Web Push, доставляются, даже когда приложение полностью закрыто/убито системой).
+    # Значение — содержимое service account JSON целиком, одной строкой (Firebase Console →
+    # Настройки проекта → Служебные аккаунты → Создать закрытый ключ). Если пусто — FCM
+    # push просто не отправляется, в БД по-прежнему пишется обычное уведомление.
+    firebase_credentials_json: str = ""
+
     # Read-only Postgres-роль для Grafana (см. docker-compose.yml, grafana/provisioning).
     grafana_db_password: str = "change-me"
 

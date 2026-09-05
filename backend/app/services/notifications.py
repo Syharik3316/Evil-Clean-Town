@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
-from app.services.push import send_web_push
+from app.services.push import send_fcm_push, send_web_push
 
 logger = logging.getLogger(__name__)
 
@@ -32,3 +32,8 @@ async def notify(
         await send_web_push(db, user_id, title, body, related_entity_type, related_entity_id)
     except Exception:
         logger.exception("Web push: не удалось отправить уведомление user_id=%s", user_id)
+
+    try:
+        await send_fcm_push(db, user_id, title, body, related_entity_type, related_entity_id)
+    except Exception:
+        logger.exception("FCM push: не удалось отправить уведомление user_id=%s", user_id)

@@ -285,11 +285,36 @@ function showForgotPasswordModal(onReset) {
 function initDropdown(triggerEl, panelEl) {
   if (!triggerEl || !panelEl) return;
 
+  // На узких экранах панель, прижатая (right:0) к самой кнопке-триггеру, может
+  // вылезать за левый край экрана — триггер внутри topbar-auth стоит не у самого
+  // края (справа от него ещё имя/баллы/выход). Поэтому на мобильных считаем
+  // позицию в px и жёстко зажимаем панель в границах viewport.
+  function positionPanel() {
+    if (window.innerWidth > 720) {
+      panelEl.style.position = "";
+      panelEl.style.top = "";
+      panelEl.style.left = "";
+      panelEl.style.right = "";
+      panelEl.style.width = "";
+      return;
+    }
+    const margin = 12;
+    const rect = triggerEl.getBoundingClientRect();
+    const panelWidth = Math.min(330, window.innerWidth - margin * 2);
+    const left = Math.max(margin, Math.min(rect.right - panelWidth, window.innerWidth - panelWidth - margin));
+    panelEl.style.position = "fixed";
+    panelEl.style.top = rect.bottom + 8 + "px";
+    panelEl.style.left = left + "px";
+    panelEl.style.right = "auto";
+    panelEl.style.width = panelWidth + "px";
+  }
+
   function close() {
     panelEl.classList.remove("show");
     triggerEl.setAttribute("aria-expanded", "false");
   }
   function open() {
+    positionPanel();
     panelEl.classList.add("show");
     triggerEl.setAttribute("aria-expanded", "true");
   }

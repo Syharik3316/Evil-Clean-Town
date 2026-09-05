@@ -36,3 +36,19 @@ class PushSubscription(Base):
     p256dh: Mapped[str] = mapped_column(String(200), nullable=False)
     auth: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class FcmDevice(Base):
+    """Токен Firebase Cloud Messaging мобильного приложения (Capacitor/Android).
+
+    Аналог PushSubscription для нативного приложения: тот же принцип (токен уникален
+    глобально, обновляется при повторной регистрации того же устройства), но без
+    p256dh/auth — FCM сам шифрует доставку до устройства, backend лишь хранит токен
+    и шлёт через Firebase Admin SDK (см. app/services/push.py)."""
+
+    __tablename__ = "fcm_devices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

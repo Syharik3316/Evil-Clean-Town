@@ -30,3 +30,13 @@ class PushSubscriptionCreate(BaseModel):
 
 class PushUnsubscribeRequest(BaseModel):
     endpoint: str
+
+
+class FcmTokenRegister(BaseModel):
+    """Токен устройства, полученный от @capacitor/push-notifications (событие 'registration')."""
+
+    token: str
+
+
+class FcmTokenUnregister(BaseModel):
+    token: str
