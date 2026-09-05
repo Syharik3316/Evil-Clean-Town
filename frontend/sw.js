@@ -1,5 +1,5 @@
-const CACHE_NAME = "chistybereg-v1";
-const APP_SHELL = ["/", "/index.html", "/css/style.css", "/js/api.js", "/js/ui.js", "/js/nav.js", "/manifest.json", "/logo.png"];
+const CACHE_NAME = "goodwill-v2";
+const APP_SHELL = ["/", "/index.html", "/css/style.css", "/js/api.js", "/js/ui.js", "/js/nav.js", "/manifest.json", "/logo.png", "/favicon.ico"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

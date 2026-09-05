@@ -1,22 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_current_user, get_db, require_organizer
+from app.core.security import hash_password, verify_password
 from app.models.event import Event
 from app.models.gamification import Achievement, UserAchievement
-from app.models.user import AgeVerificationMethod, Organization, Team, User
+from app.models.user import AgeVerificationMethod, Organization, Team, User, UserRole
 from app.models.verification import ManualVerificationSubmission
 from app.schemas.user import (
     AvatarFrameRequest,
+    EmailChangeConfirmRequest,
+    EmailChangeRequest,
     LeaderboardEntry,
     ManualVerificationRequest,
+    OrganizationBioUpdate,
+    OrganizationOut,
+    PasswordChangeRequest,
+    UsernameChangeRequest,
     UserMe,
     UserPublic,
     UserUpdate,
 )
 from app.services import gosuslugi
+from app.services.uploads import save_upload_image
+from app.services.verification import consume_email_verification_code, issue_email_verification_code
 
 router = APIRouter(tags=["users"])
 
@@ -42,6 +51,107 @@ async def update_me(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.post("/users/me/avatar", response_model=UserMe)
+async def upload_avatar(
+    photo: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user.avatar_url = await save_upload_image(photo, "avatars")
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.patch("/users/me/username", response_model=UserMe)
+async def change_username(
+    payload: UsernameChangeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль")
+    if payload.new_username != user.username:
+        existing = await db.execute(select(User).where(User.username == payload.new_username))
+        if existing.scalar_one_or_none() is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Такой логин уже занят")
+    user.username = payload.new_username
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.patch("/users/me/password", response_model=UserMe)
+async def change_password(
+    payload: PasswordChangeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль")
+    user.password_hash = hash_password(payload.new_password)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.post("/users/me/email/change", response_model=UserMe)
+async def request_email_change(
+    payload: EmailChangeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль")
+    if payload.new_email == user.email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Это уже ваш текущий email")
+    existing = await db.execute(select(User).where(User.email == payload.new_email))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Пользователь с таким email уже существует")
+
+    user.pending_email = payload.new_email
+    await issue_email_verification_code(db, user, target_email=payload.new_email)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.post("/users/me/email/confirm", response_model=UserMe)
+async def confirm_email_change(
+    payload: EmailChangeConfirmRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not user.pending_email:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Нет ожидающей подтверждения смены email")
+
+    ok = await consume_email_verification_code(db, user, payload.code)
+    if not ok:
+        await db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный или просроченный код")
+
+    user.email = user.pending_email
+    user.pending_email = None
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.patch("/organizations/me", response_model=OrganizationOut)
+async def update_my_organization(
+    payload: OrganizationBioUpdate,
+    user: User = Depends(require_organizer),
+    db: AsyncSession = Depends(get_db),
+):
+    if user.role != UserRole.organizer or user.organization_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="У вас нет организации")
+    organization = await db.get(Organization, user.organization_id)
+    organization.bio = payload.bio
+    await db.commit()
+    await db.refresh(organization)
+    return organization
 
 
 @router.post("/users/me/age-verification/manual", response_model=UserMe)
@@ -88,11 +198,18 @@ async def link_dvizhenie_pervyh(user: User = Depends(get_current_user), db: Asyn
 @router.get("/users/me/avatar-frames")
 async def list_unlocked_frames(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Achievement.avatar_frame_code)
+        select(Achievement.avatar_frame_code, Achievement.avatar_frame_image_url)
         .join(UserAchievement, UserAchievement.achievement_id == Achievement.id)
         .where(UserAchievement.user_id == user.id, Achievement.avatar_frame_code.is_not(None))
     )
-    return {"frames": sorted(set(result.scalars().all()))}
+    # один и тот же код рамки может встречаться у нескольких ачивок — если хотя бы у одной
+    # задана кастомная картинка, используем её
+    images_by_code: dict[str, str | None] = {}
+    for code, image_url in result.all():
+        if code not in images_by_code or image_url:
+            images_by_code[code] = image_url
+    frames = [{"code": code, "image_url": images_by_code[code]} for code in sorted(images_by_code)]
+    return {"frames": frames}
 
 
 @router.post("/users/me/avatar-frame", response_model=UserMe)

@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: "Чистый берег"
+  - name: "GoodWill"
     orgId: 1
-    folder: "Чистый берег"
+    folder: "GoodWill"
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

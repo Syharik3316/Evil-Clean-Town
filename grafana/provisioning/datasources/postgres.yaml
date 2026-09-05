@@ -1,11 +1,11 @@
 apiVersion: 1
 
 datasources:
-  - name: PostgreSQL (Чистый берег)
+  - name: PostgreSQL (GoodWill)
     uid: chistybereg-postgres
     type: postgres
     access: proxy
-    url: db:5432
+    url: ${DB_HOST}:${DB_PORT}
     database: ${GRAFANA_DB_NAME}
     user: grafana_reader
     isDefault: true

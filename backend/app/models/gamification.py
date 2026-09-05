@@ -24,6 +24,8 @@ class Achievement(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     icon: Mapped[str] = mapped_column(String(10), default="🏅", nullable=False)
+    # кастомное изображение значка ачивки (загружается админом), приоритетнее icon при наличии
+    image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     criteria_type: Mapped[AchievementCriteria] = mapped_column(Enum(AchievementCriteria), nullable=False)
     criteria_value: Mapped[int] = mapped_column(Integer, nullable=False)
     points_reward: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -31,6 +33,8 @@ class Achievement(Base):
     season: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # код рамки аватара, которую открывает эта ачивка (см. frame-* классы в css/style.css)
     avatar_frame_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # кастомное изображение рамки аватара (загружается админом), приоритетнее avatar_frame_code при наличии
+    avatar_frame_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class UserAchievement(Base):

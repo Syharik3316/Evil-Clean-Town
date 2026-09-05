@@ -73,6 +73,12 @@ async function initOrganizerPage() {
       '<div class="alert error">Доступно только организаторам.</div>';
     return;
   }
+  if (user.organization && user.organization.status !== "approved") {
+    document.getElementById("create-event-root").innerHTML =
+      '<div class="alert info">Создание мероприятий станет доступно после подтверждения вашей организации администрацией — см. статус в профиле.</div>';
+    document.getElementById("organizer-root").innerHTML = "";
+    return;
+  }
 
   await renderCreateEventForm();
 

@@ -22,10 +22,230 @@ function ageMethodLabel(method) {
   return { gosuslugi: "Госуслуги", manual: "вручную" }[method] || method;
 }
 
-function avatarCircleHtml(user, frameClass = "frame-none") {
-  return `<div class="${frameClass}" style="width:64px;height:64px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700">
-    ${escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase())}
+function orgStatusBadge(org) {
+  if (!org) return "";
+  if (org.status === "approved") return '<span class="badge approved">Подтверждена</span>';
+  if (org.status === "rejected") {
+    return `<span class="badge rejected">Отклонена</span>${org.rejection_reason ? `<p class="muted">Причина: ${escapeHtml(org.rejection_reason)}</p>` : ""}`;
+  }
+  return '<span class="badge pending">Ожидает подтверждения администрацией</span>';
+}
+
+function avatarCircleHtml(user, frameClass = "frame-none", size = 64) {
+  const inner = user.avatar_url
+    ? `<img src="${user.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+    : escapeHtml((user.display_name || "?").slice(0, 1).toUpperCase());
+  return `<div class="${frameClass}" style="width:${size}px;height:${size}px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;overflow:hidden">
+    ${inner}
   </div>`;
+}
+
+function avatarUploadHtml() {
+  return `
+    <div>
+      <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp" hidden />
+      <button class="btn secondary" type="button" id="avatar-upload-btn" style="font-size:0.8rem; padding:4px 10px">Изменить фото</button>
+    </div>`;
+}
+
+function bindAvatarUpload() {
+  const btn = document.getElementById("avatar-upload-btn");
+  const input = document.getElementById("avatar-file");
+  if (!btn || !input) return;
+  btn.addEventListener("click", () => input.click());
+  input.addEventListener("change", async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("photo", file);
+    try {
+      await api.postForm("/users/me/avatar", formData);
+      cachedUser = null;
+      toast("Фото обновлено", "success");
+      initProfilePage();
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
+}
+
+function bioCardHtml(currentBio) {
+  return `
+    <h2>Обо мне</h2>
+    <div class="card">
+      <textarea id="bio-input" rows="3" placeholder="Расскажите немного о себе…">${escapeHtml(currentBio || "")}</textarea>
+      <button class="btn secondary" id="bio-save" style="margin-top:8px">Сохранить</button>
+      <p id="bio-status" class="muted"></p>
+    </div>`;
+}
+
+function bindBio() {
+  const btn = document.getElementById("bio-save");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const statusEl = document.getElementById("bio-status");
+    try {
+      await api.patch("/users/me", { bio: document.getElementById("bio-input").value.trim() || null });
+      cachedUser = null;
+      statusEl.textContent = "Сохранено!";
+    } catch (err) {
+      statusEl.textContent = err.message;
+    }
+  });
+}
+
+/* ---------- Аккаунт: смена логина/пароля/email (общее для всех ролей) ---------- */
+
+function showAccountModal({ id, title, fields, submitLabel, onSubmit }) {
+  let modal = document.getElementById(id);
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.id = id;
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="modal">
+        <h2>${title}</h2>
+        <div id="${id}-alert"></div>
+        <form id="${id}-form">
+          ${fields
+            .map(
+              (f) =>
+                `<div class="field"><label for="${id}-${f.name}">${f.label}</label><input type="${f.type || "text"}" id="${id}-${f.name}" ${f.attrs || ""} required /></div>`
+            )
+            .join("")}
+          <div style="display:flex; gap:8px">
+            <button class="btn" type="submit" style="flex:1">${submitLabel}</button>
+            <button class="btn secondary" type="button" id="${id}-cancel">Отмена</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById(`${id}-alert`).innerHTML = "";
+  fields.forEach((f) => {
+    document.getElementById(`${id}-${f.name}`).value = "";
+  });
+  modal.hidden = false;
+
+  const form = document.getElementById(`${id}-form`);
+  const freshForm = form.cloneNode(true);
+  form.replaceWith(freshForm);
+
+  document.getElementById(`${id}-cancel`).addEventListener("click", () => {
+    modal.hidden = true;
+  });
+  freshForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById(`${id}-alert`);
+    alertEl.innerHTML = "";
+    const values = {};
+    fields.forEach((f) => {
+      values[f.name] = document.getElementById(`${id}-${f.name}`).value.trim();
+    });
+    try {
+      await onSubmit(values);
+      modal.hidden = true;
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+}
+
+function showEmailChangeCodeModal(email) {
+  showAccountModal({
+    id: "acc-email-code-modal",
+    title: "Подтверждение нового email",
+    fields: [{ name: "code", label: `Код из письма на ${email}`, attrs: 'inputmode="numeric" maxlength="6"' }],
+    submitLabel: "Подтвердить",
+    onSubmit: async (v) => {
+      await api.post("/users/me/email/confirm", { code: v.code });
+      cachedUser = null;
+      toast("Email изменён", "success");
+      initProfilePage();
+    },
+  });
+}
+
+function accountSettingsHtml(user) {
+  return `
+    <h2>Аккаунт</h2>
+    <div class="card">
+      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
+      <p>Email: <strong>${escapeHtml(user.email)}</strong> ${user.email_verified ? '<span class="badge approved">подтверждён</span>' : '<span class="badge pending">не подтверждён</span>'}</p>
+      ${
+        user.pending_email
+          ? `<p class="muted">Ожидает подтверждения новый email <strong>${escapeHtml(user.pending_email)}</strong> — <a href="#" id="acc-confirm-pending-email">ввести код</a></p>`
+          : ""
+      }
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px">
+        <button class="btn secondary" type="button" id="acc-change-username" style="font-size:0.85rem">Сменить логин</button>
+        <button class="btn secondary" type="button" id="acc-change-password" style="font-size:0.85rem">Сменить пароль</button>
+        <button class="btn secondary" type="button" id="acc-change-email" style="font-size:0.85rem">Сменить email</button>
+      </div>
+    </div>`;
+}
+
+function bindAccountSettings(user) {
+  document.getElementById("acc-change-username").addEventListener("click", () => {
+    showAccountModal({
+      id: "acc-username-modal",
+      title: "Смена логина",
+      fields: [
+        { name: "current_password", label: "Текущий пароль", type: "password" },
+        { name: "new_username", label: "Новый логин" },
+      ],
+      submitLabel: "Сохранить",
+      onSubmit: async (v) => {
+        await api.patch("/users/me/username", v);
+        cachedUser = null;
+        toast("Логин изменён", "success");
+        initProfilePage();
+      },
+    });
+  });
+
+  document.getElementById("acc-change-password").addEventListener("click", () => {
+    showAccountModal({
+      id: "acc-password-modal",
+      title: "Смена пароля",
+      fields: [
+        { name: "current_password", label: "Текущий пароль", type: "password" },
+        { name: "new_password", label: "Новый пароль (от 6 символов)", type: "password", attrs: 'minlength="6"' },
+      ],
+      submitLabel: "Сохранить",
+      onSubmit: async (v) => {
+        await api.patch("/users/me/password", v);
+        toast("Пароль изменён", "success");
+      },
+    });
+  });
+
+  document.getElementById("acc-change-email").addEventListener("click", () => {
+    showAccountModal({
+      id: "acc-email-modal",
+      title: "Смена email",
+      fields: [
+        { name: "current_password", label: "Текущий пароль", type: "password" },
+        { name: "new_email", label: "Новый email", type: "email" },
+      ],
+      submitLabel: "Отправить код",
+      onSubmit: async (v) => {
+        await api.post("/users/me/email/change", v);
+        toast("Код отправлен на новую почту", "success");
+        showEmailChangeCodeModal(v.new_email);
+      },
+    });
+  });
+
+  const confirmLink = document.getElementById("acc-confirm-pending-email");
+  if (confirmLink) {
+    confirmLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showEmailChangeCodeModal(user.pending_email);
+    });
+  }
 }
 
 /* ---------- Организатор: компактный профиль организации ---------- */
@@ -33,6 +253,7 @@ function avatarCircleHtml(user, frameClass = "frame-none") {
 function renderOrganizerProfile(user) {
   const root = document.getElementById("profile-root");
   const org = user.organization;
+  const orgApproved = !org || org.status === "approved";
 
   root.innerHTML = `
     <div style="display:flex; align-items:center; gap:16px">
@@ -41,6 +262,7 @@ function renderOrganizerProfile(user) {
         <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
         <span class="badge">${roleLabel(user.role)}</span>
       </div>
+      ${avatarUploadHtml()}
     </div>
 
     <h2>Организация</h2>
@@ -49,22 +271,35 @@ function renderOrganizerProfile(user) {
         org
           ? `<p><strong>${escapeHtml(org.name)}</strong></p>
              <p class="muted">ИНН ${escapeHtml(org.inn)} · ${org.legal_type === "legal_entity" ? "Юридическое лицо" : "ИП"}</p>
-             <p class="badge">${Math.round(org.points_total)} баллов организации</p>`
+             <p>${orgStatusBadge(org)}</p>
+             <p class="badge">${Math.round(org.points_total)} баллов организации</p>
+             <div class="field" style="margin-top:10px">
+               <label for="org-bio-input">Обо мне (организация)</label>
+               <textarea id="org-bio-input" rows="3" placeholder="Расскажите об организации…">${escapeHtml(org.bio || "")}</textarea>
+             </div>
+             <button class="btn secondary" id="org-bio-save">Сохранить</button>
+             <p id="org-bio-status" class="muted"></p>`
           : '<p class="muted">Организация не указана.</p>'
       }
     </div>
 
+    ${
+      !orgApproved
+        ? '<div class="alert info">Пока организация не подтверждена администрацией, создание мероприятий и курсов недоступно.</div>'
+        : ""
+    }
+
     <h2>Быстрые действия</h2>
     <div class="grid">
-      <div class="card">
+      <div class="card" ${orgApproved ? "" : 'style="opacity:0.55"'}>
         <h2 style="margin-top:0">🧹 Мои мероприятия</h2>
         <p class="muted">Создание мероприятий и заявки волонтёров.</p>
-        <a href="/organizer">Перейти →</a>
+        ${orgApproved ? '<a href="/organizer">Перейти →</a>' : '<span class="muted">Недоступно до подтверждения</span>'}
       </div>
-      <div class="card">
+      <div class="card" ${orgApproved ? "" : 'style="opacity:0.55"'}>
         <h2 style="margin-top:0">📘 Курсы</h2>
         <p class="muted">Создание и модерация обучающих курсов.</p>
-        <a href="/lessons">Перейти →</a>
+        ${orgApproved ? '<a href="/lessons">Перейти →</a>' : '<span class="muted">Недоступно до подтверждения</span>'}
       </div>
       <div class="card">
         <h2 style="margin-top:0">📸 Репорты</h2>
@@ -73,12 +308,25 @@ function renderOrganizerProfile(user) {
       </div>
     </div>
 
-    <h2>Аккаунт</h2>
-    <div class="card">
-      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
-      <p>Email: <strong>${escapeHtml(user.email)}</strong> ${user.email_verified ? '<span class="badge approved">подтверждён</span>' : '<span class="badge pending">не подтверждён</span>'}</p>
-    </div>
+    ${accountSettingsHtml(user)}
   `;
+
+  bindAvatarUpload();
+  bindAccountSettings(user);
+
+  const orgBioSave = document.getElementById("org-bio-save");
+  if (orgBioSave) {
+    orgBioSave.addEventListener("click", async () => {
+      const statusEl = document.getElementById("org-bio-status");
+      try {
+        await api.patch("/organizations/me", { bio: document.getElementById("org-bio-input").value.trim() || null });
+        cachedUser = null;
+        statusEl.textContent = "Сохранено!";
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    });
+  }
 }
 
 /* ---------- Админ: минимальный аккаунт-профиль ---------- */
@@ -93,18 +341,19 @@ function renderAdminProfile(user) {
         <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
         <span class="badge">${roleLabel(user.role)}</span>
       </div>
+      ${avatarUploadHtml()}
     </div>
 
     <h2>Быстрые действия</h2>
     <div class="grid">
       <div class="card">
         <h2 style="margin-top:0">🎫 Тикеты</h2>
-        <p class="muted">Модерация предложенных мероприятий и курсов.</p>
+        <p class="muted">Модерация предложенных мероприятий, курсов и организаций.</p>
         <a href="/tickets">Перейти →</a>
       </div>
       <div class="card">
         <h2 style="margin-top:0">📊 Статистика</h2>
-        <p class="muted">Сводная статистика фонда.</p>
+        <p class="muted">Сводная статистика фонда и управление ачивками.</p>
         <a href="/admin">Перейти →</a>
       </div>
       <div class="card">
@@ -114,12 +363,11 @@ function renderAdminProfile(user) {
       </div>
     </div>
 
-    <h2>Аккаунт</h2>
-    <div class="card">
-      <p>Логин: <strong>${escapeHtml(user.username)}</strong></p>
-      <p>Email: <strong>${escapeHtml(user.email)}</strong></p>
-    </div>
+    ${accountSettingsHtml(user)}
   `;
+
+  bindAvatarUpload();
+  bindAccountSettings(user);
 }
 
 /* ---------- Волонтёр: геймификация ---------- */
@@ -140,7 +388,11 @@ async function renderVolunteerProfile(user) {
         .map(
           (a) => `
           <div class="card">
-            <div style="font-size:1.6rem">${a.achievement.icon}</div>
+            ${
+              a.achievement.image_url
+                ? `<img src="${a.achievement.image_url}" alt="" style="width:48px;height:48px;object-fit:contain" />`
+                : `<div style="font-size:1.6rem">${a.achievement.icon}</div>`
+            }
             <strong>${escapeHtml(a.achievement.title)}</strong>
             <p class="muted">${escapeHtml(a.achievement.description)}</p>
           </div>`
@@ -159,9 +411,10 @@ async function renderVolunteerProfile(user) {
   const frameClass = `frame-${user.selected_avatar_frame || "none"}`;
 
   root.innerHTML = `
-    <div style="display:flex; align-items:center; gap:16px">
+    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
       ${avatarCircleHtml(user, frameClass)}
       <h1 style="margin:0">${escapeHtml(user.display_name)}</h1>
+      ${avatarUploadHtml()}
     </div>
     <div class="grid">
       <div class="card">
@@ -182,15 +435,18 @@ async function renderVolunteerProfile(user) {
       </div>
     </div>
 
+    ${bioCardHtml(user.bio)}
+
     <h2>Рамка аватара</h2>
     <div class="card">
       ${unlockedFrames.length
         ? `<div style="display:flex; gap:10px; flex-wrap:wrap">
             <button class="btn secondary" data-frame="">Без рамки</button>
             ${unlockedFrames
-              .map(
-                (f) =>
-                  `<button class="btn secondary frame-${f}" data-frame="${f}" style="border-radius:50%;width:44px;height:44px;padding:0"></button>`
+              .map((f) =>
+                f.image_url
+                  ? `<button class="btn secondary" data-frame="${f.code}" style="border-radius:50%;width:44px;height:44px;padding:0;background:url('${f.image_url}') center/cover"></button>`
+                  : `<button class="btn secondary frame-${f.code}" data-frame="${f.code}" style="border-radius:50%;width:44px;height:44px;padding:0"></button>`
               )
               .join("")}
           </div>`
@@ -254,9 +510,15 @@ async function renderVolunteerProfile(user) {
 
     <h2>История баллов</h2>
     <div class="card">${pointsHtml}</div>
+
+    ${accountSettingsHtml(user)}
   `;
 
-  const shareText = `Мой вклад в «Чистый берег»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
+  bindAvatarUpload();
+  bindBio();
+  bindAccountSettings(user);
+
+  const shareText = `Мой вклад в «GoodWill»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
   const shareUrl = window.location.origin;
   document.getElementById("share-vk").href = `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`;
   document.getElementById("share-tg").href = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
@@ -270,7 +532,7 @@ async function renderVolunteerProfile(user) {
   });
 
   document.getElementById("share-btn").addEventListener("click", async () => {
-    const text = `Мой вклад в «Чистый берег»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
+    const text = `Мой вклад в «GoodWill»: ${Math.round(user.points_total)} баллов и ${achievements.length} ачивок! 🌊`;
     const statusEl = document.getElementById("share-status");
     if (navigator.share) {
       try {

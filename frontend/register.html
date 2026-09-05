@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Регистрация — Чистый берег</title>
+  <title>Регистрация — GoodWill</title>
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/favicon.ico" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -49,21 +50,6 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="code-modal" hidden>
-    <div class="modal">
-      <h2>Подтверждение почты</h2>
-      <p class="muted">Мы отправили код подтверждения на <strong id="code-modal-email"></strong>.</p>
-      <div id="code-alert"></div>
-      <form id="code-form">
-        <div class="field">
-          <label for="code">Код из письма</label>
-          <input type="text" id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus />
-        </div>
-        <button class="btn" type="submit" style="width:100%">Подтвердить</button>
-      </form>
-    </div>
-  </div>
-
   <div id="app-footer"></div>
 
   <script src="/js/api.js"></script>
@@ -74,7 +60,6 @@
     renderFooter();
 
     let isOrganizer = false;
-    let pendingEmail = "";
 
     document.getElementById("organizer-toggle").addEventListener("click", () => {
       isOrganizer = !isOrganizer;
@@ -104,23 +89,10 @@
 
       try {
         const res = await api.post(path, payload);
-        pendingEmail = res.email;
-        document.getElementById("code-modal-email").textContent = pendingEmail;
-        document.getElementById("code-modal").hidden = false;
-      } catch (err) {
-        alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
-      }
-    });
-
-    document.getElementById("code-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const alertEl = document.getElementById("code-alert");
-      alertEl.innerHTML = "";
-      const code = document.getElementById("code").value.trim();
-      try {
-        const tokens = await api.post("/auth/verify-email", { email: pendingEmail, code });
-        setTokens(tokens.access_token, tokens.refresh_token);
-        window.location.href = "/profile";
+        showEmailCodeModal(res.email, (tokens) => {
+          setTokens(tokens.access_token, tokens.refresh_token);
+          window.location.href = "/profile";
+        });
       } catch (err) {
         alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
       }

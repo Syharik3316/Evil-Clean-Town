@@ -1,4 +1,4 @@
-# Архитектура «Чистый берег»
+# Архитектура «GoodWill»
 
 Актуально на Alembic-миграции `99d6ab27f54c` … `b3c8e1f4a927`. Обновляйте этот файл при
 значимых архитектурных изменениях.
@@ -19,8 +19,12 @@ flowchart LR
 ```
 
 - **backend**: единственный сервис с бизнес-логикой; на старте (`entrypoint.sh`) прогоняет
-  `alembic upgrade head`, засеивает справочник учреждений (всегда), затем демо-данные
-  (`app/db/seed.py`, только если `SEED_ON_STARTUP=true`), затем поднимает uvicorn.
+  `alembic upgrade head`, затем всегда идемпотентно засеивает справочник учреждений
+  (`app/db/seed_institutions.py`), администратора из `ADMIN_*` в `.env`
+  (`app/db/seed_admin.py`, пропускается, если переменные пустые или пользователь уже
+  есть) и справочный контент — участки побережья/курсы/ачивки (`app/db/seed_content.py`),
+  затем поднимает uvicorn. Ничего из этого не гейтится флагом — весь сидинг безопасен для
+  повторного запуска на уже заполненной БД.
 - **nginx**: единственная точка входа снаружи (порт 80). Раздаёт `frontend/` как статику,
   проксирует `/api/`, `/static/`, `/docs|/redoc|/openapi.json` на backend, отдаёт
   `/uploads/` напрямую с диска (без похода в backend).
@@ -37,9 +41,16 @@ flowchart LR
   `postgres`) — смена `.env` после первого запуска не меняет пароль уже существующей
   роли внутри уже существующего volume; нужно либо руками поменять пароль роли
   (`ALTER ROLE ... PASSWORD ...` через `psql`), либо снести volume `pgdata` (потеря
-  данных). В dev/тестах backend вместо Postgres может работать на SQLite (`DATABASE_URL`
-  не задан) — тесты используют in-memory SQLite напрямую через `Base.metadata.create_all`,
-  миграции Alembic в тестах не участвуют.
+  данных). Сервис живёт за Compose-профилем `local-db` (включён по умолчанию через
+  `COMPOSE_PROFILES=local-db` в `.env`) — backend и Grafana подключаются к
+  `${DB_HOST:-db}:${DB_PORT:-5432}`, так что для внешней БД (не из этого compose)
+  достаточно поменять `DB_HOST`/`DB_PORT` и очистить `COMPOSE_PROFILES`, чтобы локальный
+  контейнер не запускался (см. README, «База данных: внутри Docker или снаружи»);
+  backend/grafana зависят от `db` через `depends_on: required: false` — мягкая
+  зависимость, не требующая, чтобы профиль был активен. В dev/тестах backend вместо
+  Postgres может работать на SQLite (`DATABASE_URL` не задан) — тесты используют
+  in-memory SQLite напрямую через `Base.metadata.create_all`, миграции Alembic в тестах
+  не участвуют.
 
 ## Backend: слои
 
@@ -52,22 +63,33 @@ app/services/*        Бизнес-логика, переиспользуема�
                                         (единственное место, где меняются points_total,
                                         включая начисление очков организации-организатору)
                      notifications.py — notify() — единственная точка создания Notification
-                     verification.py  — email-код подтверждения (генерация/проверка)
-                     email.py         — отправка письма через aiosmtplib (no-op + лог, если SMTP не настроен)
+                     verification.py  — email-код подтверждения (генерация/проверка), умеет слать
+                                        код на другой адрес (target_email) для смены email
+                     email.py         — HTML-письма (лого/брендовые цвета) через aiosmtplib
+                                        (no-op + лог, если SMTP не настроен)
+                     uploads.py       — save_upload_image(): общая валидация типа/размера и
+                                        сохранение в uploads/<subdir>/ (аватары, ачивки, рамки, репорты)
                      gosuslugi.py     — ЗАГЛУШКА интеграции с ЕСИА (is_configured()==False всегда,
                                         пока не заданы GOSUSLUGI_* в .env)
                      inn.py           — проверка контрольной суммы ИНН (10/12 цифр)
 app/models/*          SQLAlchemy 2.0 ORM-модели (Mapped[...]), сгруппированы по файлам-доменам
-app/core/{config,deps,security}.py   настройки (.env), FastAPI-зависимости (auth/роли), JWT/bcrypt
+app/core/{config,deps,security}.py   настройки (.env), FastAPI-зависимости (auth/роли,
+                     ensure_organization_approved), JWT/bcrypt
 app/db/seed_institutions.py   идемпотентный сид справочника Team (школы/вузы/колледжи из
-                     app/db/data/institutions_rostov.json) — вызывается в entrypoint.sh
-                     всегда, отдельно от демо-сида (SEED_ON_STARTUP)
+                     app/db/data/institutions_rostov.json)
+app/db/seed_admin.py           бутстрап единственного администратора из ADMIN_* в .env
+app/db/seed_content.py         идемпотентный сид участков побережья/курсов/ачивок
+                     (все три вызываются в entrypoint.sh всегда, без флагов)
 ```
 
 Паттерн ролевого доступа: `require_roles(*roles)` в `app/core/deps.py` — фабрика
 FastAPI-зависимостей. Для сущностей с владельцем (мероприятия, курсы) используется
 дополнительная ручная проверка `_ensure_*_owner(entity, user)` (владелец ИЛИ admin), а не
 отдельная роль — это позволяет волонтёру, предложившему мероприятие, управлять именно им.
+Аналогично `ensure_organization_approved(user)` в `app/core/deps.py` — вызывается вручную
+(не как `Depends`) в начале `POST /events` и `POST /lessons`, поднимает 403, пока
+`Organization.status != approved` у организатора-автора (у волонтёров и админа
+`organization` нет/не проверяется).
 
 Волонтёрские механики начисления баллов (`POST /events/{id}/register`, `/checkin`,
 `POST /reports` (отправка репорта), `POST /lessons/{id}/complete`) явно ограничены
@@ -97,12 +119,30 @@ admin-only) — его прохождение обязательно перед 
 опубликованный курс через `Event.prerequisite_lesson_id`
 (`POST /events/{id}/attach-course`).
 
+**Организация** (`Organization.status`): `pending` (по умолчанию при организаторской
+регистрации через ИНН) → `approved`/`rejected` (решение админа в
+`/admin/tickets/organizations/{id}/approve|reject`, reject требует причины →
+уведомление всем пользователям организации). Пока не `approved`, организатор из этой
+организации может войти и просматривать платформу, но `POST /events` и `POST /lessons`
+вернут 403 (`ensure_organization_approved`, см. выше). Организации, существовавшие до
+введения этой миграции, при апгрейде переводятся в `approved` автоматически (бэкфилл в
+миграции `8eb626abc523`), чтобы не заблокировать уже работающих организаторов.
+
 **Тикеты админа** (`app/api/v1/admin_tickets.py`, admin-only) — точка модерации для
-мероприятий и курсов: approve / reject (причина обязательна, уходит через `notify()`) /
-edit-approve (правки применяются, затем публикация). Репорты о мусоре модерируются
-отдельным, более старым эндпоинтом `POST /reports/{id}/moderate` (`require_organizer` —
-доступен и организатору, и админу, не только админу, в отличие от мероприятий/курсов),
-на фронтенде это отражено в `reports.html` (см. ниже), а не в `tickets.html`.
+мероприятий, курсов и организаций: approve / reject (причина обязательна, уходит через
+`notify()`) / edit-approve для мероприятий и курсов (правки применяются, затем
+публикация). Репорты о мусоре модерируются отдельным, более старым эндпоинтом
+`POST /reports/{id}/moderate` (`require_organizer` — доступен и организатору, и админу,
+не только админу, в отличие от мероприятий/курсов/организаций), на фронтенде это отражено
+в `reports.html` (см. ниже), а не в `tickets.html`.
+
+**Ачивки** (`Achievement`) — управляются только через админский CRUD
+(`POST/PATCH/DELETE /admin/achievements`, `.../image`, `.../frame-image`), больше не
+хардкожены только в сиде: `app/db/seed_content.py` лишь предзаполняет стартовый набор,
+дальше админ может добавлять свои через `/admin` (иконка-эмодзи ИЛИ загруженная картинка
+в `image_url`; рамка аватара — пресет `avatar_frame_code` (см. `frame-*` классы в
+`css/style.css`) ИЛИ загруженная картинка-рамка в `avatar_frame_image_url` — на фронтенде
+картинка всегда приоритетнее пресета/эмодзи при наличии).
 
 ## Frontend
 
@@ -156,7 +196,18 @@ backend всё ещё существуют и работают, но фронт�
 класс `.brand-logo`/`.footer-logo`), а не текст; логотип и футер рендерятся из
 `js/nav.js` (`renderNav`/`renderFooter`) на каждой странице. Кнопка «Госуслуги» в профиле —
 тоже картинка (`frontend/icons/gos.png`, класс `.gos-btn`) с hover/active-анимацией вместо
-текстовой кнопки.
+текстовой кнопки. Favicon — статический `frontend/favicon.ico`, подключён `<link
+rel="icon">` на каждой странице (nginx отдаёт его как обычный файл из корня `frontend/`).
+
+**Профиль и аккаунт**: аватар — загружаемая картинка (`POST /users/me/avatar`, поле
+`avatar_url`), а не только эмодзи/буква; при отсутствии `avatar_url` фронтенд показывает
+кружок с первой буквой имени, как раньше. «Обо мне» — `bio` на `User` (волонтёр/организатор)
+и отдельно на `Organization` (карточка организации в профиле организатора, редактируется
+через `PATCH /organizations/me`, только своя организация). Раздел «Аккаунт» в
+`profile.js` (общий для всех трёх ролей) даёт сменить логин/пароль/email — email меняется
+в два шага (`POST /users/me/email/change` → код на новый адрес → `POST
+/users/me/email/confirm`), логин/пароль — сразу, но оба требуют повторного ввода текущего
+пароля.
 
 **Яндекс.Карты / Suggest**: ключи в `frontend/js/config.js` (`YANDEX_MAPS_JS_API_KEY`,
 `YANDEX_SUGGEST_API_KEY`) — оба клиентские, привязываются по домену/рефереру в кабинете

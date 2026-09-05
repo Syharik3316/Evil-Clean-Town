@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models.user import User, UserRole
+from app.models.user import OrganizationStatus, User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -58,3 +58,22 @@ def require_roles(*roles: UserRole):
 
 require_organizer = require_roles(UserRole.organizer, UserRole.admin)
 require_admin = require_roles(UserRole.admin)
+
+
+def ensure_organization_approved(user: User) -> None:
+    """Организатор с непроверенной организацией не может создавать мероприятия/курсы —
+    только просматривать и ждать решения администрации (см. /admin/tickets/organizations).
+    Админа и волонтёров (у них нет organization) это не касается."""
+    if user.role != UserRole.organizer or user.organization is None:
+        return
+    if user.organization.status == OrganizationStatus.approved:
+        return
+    if user.organization.status == OrganizationStatus.rejected:
+        detail = "Ваша организация отклонена администрацией"
+        if user.organization.rejection_reason:
+            detail += f": {user.organization.rejection_reason}"
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Ваша организация ещё не подтверждена администрацией",
+    )
