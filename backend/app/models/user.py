@@ -25,6 +25,12 @@ class OrganizationLegalType(str, enum.Enum):
     individual_entrepreneur = "individual_entrepreneur"
 
 
+class OrganizationStatus(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class TeamType(str, enum.Enum):
     school = "school"
     club = "club"
@@ -54,6 +60,11 @@ class Organization(TimestampMixin, Base):
     legal_type: Mapped[OrganizationLegalType] = mapped_column(Enum(OrganizationLegalType), nullable=False)
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
     points_total: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    bio: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    status: Mapped[OrganizationStatus] = mapped_column(
+        Enum(OrganizationStatus), default=OrganizationStatus.pending, nullable=False
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     members: Mapped[list["User"]] = relationship(back_populates="organization")
 
@@ -68,10 +79,12 @@ class User(TimestampMixin, Base):
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.volunteer, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     points_total: Mapped[float] = mapped_column(Float, default=0, nullable=False)
     region: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    pending_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     age_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     age_verification_method: Mapped[AgeVerificationMethod] = mapped_column(
         Enum(AgeVerificationMethod), default=AgeVerificationMethod.none, nullable=False

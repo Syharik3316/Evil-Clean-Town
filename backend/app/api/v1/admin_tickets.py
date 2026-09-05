@@ -6,10 +6,11 @@ from sqlalchemy.orm import aliased
 from app.core.deps import get_db, require_admin
 from app.models.event import Event, EventStatus
 from app.models.lesson import Lesson, LessonStatus
-from app.models.user import Organization, User
+from app.models.user import Organization, OrganizationStatus, User
 from app.schemas.event import EventOut, EventUpdate
 from app.schemas.lesson import LessonOut, LessonUpdate
 from app.schemas.ticket import TicketRejectRequest
+from app.schemas.user import OrganizationTicketOut
 from app.services.notifications import notify
 
 router = APIRouter(prefix="/admin", tags=["admin-tickets"])
@@ -191,3 +192,67 @@ async def edit_and_approve_course_ticket(
     await db.commit()
     await db.refresh(lesson)
     return lesson
+
+
+@router.get("/tickets/organizations", response_model=list[OrganizationTicketOut])
+async def list_organization_tickets(
+    ticket_status: OrganizationStatus = Query(OrganizationStatus.pending, alias="status"),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Organization).where(Organization.status == ticket_status).order_by(Organization.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+async def _get_ticket_organization(db: AsyncSession, org_id: int) -> Organization:
+    organization = await db.get(Organization, org_id)
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Организация не найдена")
+    if organization.status != OrganizationStatus.pending:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Организация уже рассмотрена")
+    return organization
+
+
+async def _notify_organization_members(db: AsyncSession, org_id: int, **notify_kwargs) -> None:
+    result = await db.execute(select(User.id).where(User.organization_id == org_id))
+    for user_id in result.scalars().all():
+        await notify(db, user_id, **notify_kwargs)
+
+
+@router.post("/tickets/organizations/{org_id}/approve", response_model=OrganizationTicketOut)
+async def approve_organization_ticket(
+    org_id: int, _admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+):
+    organization = await _get_ticket_organization(db, org_id)
+    organization.status = OrganizationStatus.approved
+    organization.rejection_reason = None
+    await _notify_organization_members(
+        db, org_id, type="organization_approved",
+        title=f"Организация «{organization.name}» подтверждена администрацией",
+        related_entity_type="organization", related_entity_id=organization.id,
+    )
+    await db.commit()
+    await db.refresh(organization)
+    return organization
+
+
+@router.post("/tickets/organizations/{org_id}/reject", response_model=OrganizationTicketOut)
+async def reject_organization_ticket(
+    org_id: int,
+    payload: TicketRejectRequest,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    organization = await _get_ticket_organization(db, org_id)
+    organization.status = OrganizationStatus.rejected
+    organization.rejection_reason = payload.reason
+    await _notify_organization_members(
+        db, org_id, type="organization_rejected",
+        title=f"Организация «{organization.name}» отклонена администрацией",
+        body=payload.reason, related_entity_type="organization", related_entity_id=organization.id,
+    )
+    await db.commit()
+    await db.refresh(organization)
+    return organization

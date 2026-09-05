@@ -57,7 +57,8 @@ function switchTab(tab) {
     btn.classList.toggle("active", btn.dataset.tab === tab)
   );
   if (tab === "events") loadEventsTab();
-  else loadCoursesTab();
+  else if (tab === "courses") loadCoursesTab();
+  else loadOrganizationsTab();
 }
 
 function openReasonModal(handler) {
@@ -259,5 +260,56 @@ function bindCourseTicketRow(c) {
       },
       "course"
     );
+  });
+}
+
+async function loadOrganizationsTab() {
+  const root = document.getElementById("ticket-root");
+  root.innerHTML = `<div id="organizations-table">${skeletonLines(3)}</div>`;
+  loadOrganizationsTable();
+}
+
+async function loadOrganizationsTable() {
+  const el = document.getElementById("organizations-table");
+  try {
+    const orgs = await api.get("/admin/tickets/organizations?status=pending");
+    if (!orgs.length) {
+      el.innerHTML = '<p class="muted">Нет организаций, ожидающих подтверждения.</p>';
+      return;
+    }
+    el.innerHTML = `<table>
+      <thead><tr><th>Название</th><th>ИНН</th><th>Тип</th><th>Контактная почта</th><th>Действия</th></tr></thead>
+      <tbody>${orgs.map(organizationTicketRow).join("")}</tbody>
+    </table>`;
+    orgs.forEach(bindOrganizationTicketRow);
+  } catch (e) {
+    el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function organizationTicketRow(o) {
+  return `<tr id="org-ticket-${o.id}">
+    <td>${escapeHtml(o.name)}</td>
+    <td>${escapeHtml(o.inn)}</td>
+    <td>${o.legal_type === "legal_entity" ? "Юр. лицо" : "ИП"}</td>
+    <td>${escapeHtml(o.contact_email)}</td>
+    <td style="display:flex; gap:6px; flex-wrap:wrap">
+      <button class="btn" data-approve>Подтвердить</button>
+      <button class="btn danger" data-reject>Отклонить</button>
+    </td>
+  </tr>`;
+}
+
+function bindOrganizationTicketRow(o) {
+  const row = document.getElementById(`org-ticket-${o.id}`);
+  row.querySelector("[data-approve]").addEventListener("click", async () => {
+    await api.post(`/admin/tickets/organizations/${o.id}/approve`);
+    loadOrganizationsTable();
+  });
+  row.querySelector("[data-reject]").addEventListener("click", () => {
+    openReasonModal(async (reason) => {
+      await api.post(`/admin/tickets/organizations/${o.id}/reject`, { reason });
+      loadOrganizationsTable();
+    });
   });
 }

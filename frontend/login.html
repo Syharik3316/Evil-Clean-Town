@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Вход — Чистый берег</title>
+  <title>Вход — GoodWill</title>
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/favicon.ico" />
   <meta name="theme-color" content="#0a303e" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -66,6 +67,13 @@
         setTokens(tokens.access_token, tokens.refresh_token);
         window.location.href = "/profile";
       } catch (err) {
+        if (err.status === 403 && err.body && err.body.email) {
+          showEmailCodeModal(err.body.email, (tokens) => {
+            setTokens(tokens.access_token, tokens.refresh_token);
+            window.location.href = "/profile";
+          });
+          return;
+        }
         alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
       }
     });

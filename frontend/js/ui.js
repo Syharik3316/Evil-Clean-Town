@@ -94,6 +94,77 @@ function initAddressSuggest(inputEl, onSelect) {
   });
 }
 
+// Модалка ввода кода подтверждения email — общая для register.html (после регистрации)
+// и login.html (когда вход отклонён из-за неподтверждённого email). Создаётся один раз
+// и переиспользуется, чтобы не дублировать разметку/логику на двух страницах.
+// onVerified(tokens) вызывается после успешного POST /auth/verify-email.
+function showEmailCodeModal(email, onVerified) {
+  let modal = document.getElementById("email-code-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.id = "email-code-modal";
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="modal">
+        <h2>Подтверждение почты</h2>
+        <p class="muted" style="font-size:13.5px">Мы отправили код подтверждения на <strong id="email-code-modal-email"></strong>.</p>
+        <div id="email-code-alert"></div>
+        <form id="email-code-form">
+          <div class="field">
+            <label for="email-code-input">Код из письма</label>
+            <input class="input" type="text" id="email-code-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus />
+          </div>
+          <p class="muted" style="font-size:12.5px;margin:0 0 4px">
+            Не пришёл код? <a href="#" id="email-code-resend">Отправить ещё раз</a>
+          </p>
+          <div class="dialog-actions">
+            <button class="btn btn-secondary" type="button" id="email-code-cancel">Отмена</button>
+            <button class="btn btn-primary" type="submit">Подтвердить</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById("email-code-modal-email").textContent = email;
+  document.getElementById("email-code-alert").innerHTML = "";
+  document.getElementById("email-code-input").value = "";
+  modal.hidden = false;
+
+  // клонируем интерактивные элементы, чтобы не копить обработчики предыдущих открытий
+  const form = document.getElementById("email-code-form");
+  const freshForm = form.cloneNode(true);
+  form.replaceWith(freshForm);
+
+  document.getElementById("email-code-cancel").addEventListener("click", () => {
+    modal.hidden = true;
+  });
+  document.getElementById("email-code-resend").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("email-code-alert");
+    try {
+      await api.post("/auth/resend-code", { email });
+      toast("Код отправлен повторно", "success");
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+  freshForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("email-code-alert");
+    alertEl.innerHTML = "";
+    const code = document.getElementById("email-code-input").value.trim();
+    try {
+      const tokens = await api.post("/auth/verify-email", { email, code });
+      modal.hidden = true;
+      onVerified(tokens);
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+}
+
 function initDropdown(triggerEl, panelEl) {
   if (!triggerEl || !panelEl) return;
 

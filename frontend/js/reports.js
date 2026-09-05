@@ -26,8 +26,10 @@ async function initReportsPage() {
     if (currentReportRejectHandler) await currentReportRejectHandler(reason);
   });
 
-  if (user && (user.role === "organizer" || user.role === "admin")) {
+  if (user && user.role === "admin") {
     renderModerationView(root);
+  } else if (user && user.role === "organizer") {
+    renderOrganizerReadOnlyView(root);
   } else {
     await renderSubmissionView(root, user);
   }
@@ -288,7 +290,41 @@ async function loadMyReports() {
   }
 }
 
-/* ------------------------------------------ организатор/админ: модерация -- */
+/* ----------------------------------- организатор: только просмотр очереди -- */
+
+function renderOrganizerReadOnlyView(root) {
+  root.innerHTML = `
+    <div class="kicker">Citizen science</div>
+    <h1>Репорты о мусоре</h1>
+    <p class="lead">Модерация репортов — задача администрации фонда. Здесь можно только просматривать очередь на модерации.</p>
+    <div id="reports-readonly-table">${skeletonLines(4)}</div>`;
+  loadOrganizerReadOnlyTable();
+}
+
+async function loadOrganizerReadOnlyTable() {
+  const el = document.getElementById("reports-readonly-table");
+  try {
+    const reports = await api.get("/reports?status_filter=pending");
+    el.innerHTML = reports.length
+      ? reports
+          .map(
+            (r) => `
+        <div class="queue-item">
+          <img src="${r.photo_url}" alt="Фото репорта" />
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13.5px;line-height:1.45;margin-bottom:5px">${escapeHtml(r.description || "Без описания")}</div>
+            <div class="muted" style="font-size:11.5px">${formatDate(r.created_at)} · ${escapeHtml(r.region || "регион не указан")}</div>
+          </div>
+        </div>`
+          )
+          .join("")
+      : '<p class="muted" style="border-top:1px solid var(--color-divider);padding-top:20px">Нет репортов на модерации.</p>';
+  } catch (e) {
+    el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/* ------------------------------------------------------ админ: модерация -- */
 
 function renderModerationView(root) {
   root.innerHTML = `
@@ -359,6 +395,10 @@ function moderationItem(r) {
         <div class="muted" style="font-size:11.5px;margin-bottom:10px">
           ${formatDate(r.created_at)} · ${escapeHtml(r.region || "регион не указан")} · ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}
         </div>
+        <div class="field" style="margin-bottom:10px;max-width:160px">
+          <label for="report-points-${r.id}">Баллы за репорт</label>
+          <input class="input" type="number" id="report-points-${r.id}" min="0" value="${r.points_reward}" />
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" data-approve>Принять</button>
           <button class="btn btn-secondary btn-sm" data-reject>Отклонить</button>
@@ -371,9 +411,15 @@ function moderationItem(r) {
 function bindModerationItem(r) {
   const card = document.getElementById(`report-mod-${r.id}`);
   card.querySelector("[data-approve]").addEventListener("click", async () => {
-    await api.post(`/reports/${r.id}/moderate`, { approve: true });
-    toast("Репорт принят", "success");
-    loadModerationList(document.querySelector("#reports-sort .active").dataset.sort);
+    const pointsInput = document.getElementById(`report-points-${r.id}`);
+    const points = pointsInput.value === "" ? null : parseInt(pointsInput.value, 10);
+    try {
+      await api.post(`/reports/${r.id}/moderate`, { approve: true, points });
+      toast("Репорт принят", "success");
+      loadModerationList(document.querySelector("#reports-sort .active").dataset.sort);
+    } catch (err) {
+      toast(err.message, "error");
+    }
   });
   card.querySelector("[data-reject]").addEventListener("click", () => {
     currentReportRejectHandler = async (reason) => {

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.models.verification import LoginEvent
 from app.schemas.user import (
     OrganizerRegister,
     RefreshRequest,
+    ResendCodeRequest,
     TokenPair,
     UserLogin,
     UserRegister,
@@ -118,12 +120,29 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный логин или пароль")
     if not user.email_verified:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Подтвердите email перед входом")
+        # email передаётся вместе с detail, чтобы фронтенд мог сразу показать форму
+        # ввода кода подтверждения, не заставляя пользователя вводить email заново
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Подтвердите email перед входом", "email": user.email},
+        )
 
     user.last_login_at = utcnow()
     db.add(LoginEvent(user_id=user.id))
     await db.commit()
     return _token_pair(user.id)
+
+
+@router.post("/resend-code", response_model=VerificationSentOut)
+async def resend_code(payload: ResendCodeRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+    # тот же ответ независимо от того, найден ли пользователь — чтобы не палить,
+    # какие email зарегистрированы
+    if user is not None and not user.email_verified:
+        await issue_email_verification_code(db, user)
+        await db.commit()
+    return VerificationSentOut(email=payload.email)
 
 
 @router.post("/refresh", response_model=TokenPair)

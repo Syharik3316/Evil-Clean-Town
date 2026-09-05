@@ -4,7 +4,7 @@ import pytest
 
 from app.models.gamification import Achievement, AchievementCriteria
 from app.models.site import CoastlineSite
-from app.models.user import Organization, OrganizationLegalType, User, UserRole
+from app.models.user import Organization, OrganizationLegalType, OrganizationStatus, User, UserRole
 from tests.helpers import auth_headers, create_user, login
 
 pytestmark = pytest.mark.asyncio
@@ -13,7 +13,10 @@ EVENT_LAT, EVENT_LON = 3.0, 3.0
 
 
 async def _org_organizer(db_session, email: str) -> tuple[User, Organization]:
-    org = Organization(name="Эко Фонд Тест", inn="7707083893", legal_type=OrganizationLegalType.legal_entity, contact_email=email)
+    org = Organization(
+        name="Эко Фонд Тест", inn="7707083893", legal_type=OrganizationLegalType.legal_entity,
+        contact_email=email, status=OrganizationStatus.approved,
+    )
     db_session.add(org)
     await db_session.flush()
     user = await create_user(db_session, email, UserRole.organizer)
@@ -116,3 +119,59 @@ async def test_leaderboard_organizations_scope(client, db_session):
     assert res.status_code == 200
     names = [r["name"] for r in res.json()]
     assert "Эко Фонд Тест" in names
+
+
+async def test_admin_achievement_crud(client, db_session):
+    await create_user(db_session, "achadmin@example.com", UserRole.admin)
+    admin_token = await login(client, "achadmin@example.com")
+    await create_user(db_session, "achvol@example.com", UserRole.volunteer)
+    vol_token = await login(client, "achvol@example.com")
+
+    res = await client.post(
+        "/api/v1/admin/achievements",
+        json={
+            "code": "custom_badge", "title": "Своя ачивка", "description": "Тестовое условие",
+            "icon": "🎖️", "criteria_type": "points_threshold", "criteria_value": 50, "points_reward": 5,
+            "avatar_frame_code": "platinum",
+        },
+        headers=auth_headers(admin_token),
+    )
+    assert res.status_code == 201, res.text
+    achievement_id = res.json()["id"]
+
+    # volunteer/organizer cannot manage achievements
+    res = await client.post(
+        "/api/v1/admin/achievements",
+        json={"code": "x", "title": "x", "description": "x", "criteria_type": "points_threshold", "criteria_value": 1},
+        headers=auth_headers(vol_token),
+    )
+    assert res.status_code == 403
+
+    # duplicate code rejected
+    res = await client.post(
+        "/api/v1/admin/achievements",
+        json={
+            "code": "custom_badge", "title": "Дубль", "description": "x",
+            "criteria_type": "points_threshold", "criteria_value": 1,
+        },
+        headers=auth_headers(admin_token),
+    )
+    assert res.status_code == 409
+
+    res = await client.patch(
+        f"/api/v1/admin/achievements/{achievement_id}",
+        json={"title": "Обновлённое название", "points_reward": 15},
+        headers=auth_headers(admin_token),
+    )
+    assert res.status_code == 200
+    assert res.json()["title"] == "Обновлённое название"
+    assert res.json()["points_reward"] == 15
+
+    res = await client.get("/api/v1/achievements")
+    assert any(a["code"] == "custom_badge" for a in res.json())
+
+    res = await client.delete(f"/api/v1/admin/achievements/{achievement_id}", headers=auth_headers(admin_token))
+    assert res.status_code == 204
+
+    res = await client.get("/api/v1/achievements")
+    assert not any(a["code"] == "custom_badge" for a in res.json())

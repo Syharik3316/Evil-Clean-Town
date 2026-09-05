@@ -1,5 +1,5 @@
 /* Дашборд фонда: KPI из API, встроенное окно Grafana, карта активности
-   (Яндекс.Карты) и очередь модерации репортов. */
+   (Яндекс.Карты), очередь модерации репортов и управление ачивками. */
 
 let adminStats = null;
 let adminRange = "now-30d";
@@ -7,6 +7,14 @@ let adminRejectHandler = null;
 let adminMapCtx = null;
 
 const GRAFANA_BASE = `${location.protocol}//${location.hostname}:${GRAFANA_PORT}/d/${GRAFANA_DASHBOARD_UID}/activity`;
+
+const CRITERIA_LABELS = {
+  lessons_completed: "Пройдено уроков",
+  events_attended: "Посещено мероприятий",
+  reports_approved: "Принято репортов",
+  points_threshold: "Набрано баллов",
+  seasonal_events_attended: "Уборок за сезон",
+};
 
 async function initAdminPage() {
   const root = document.getElementById("admin-root");
@@ -42,6 +50,8 @@ async function initAdminPage() {
   loadAdminQueue();
   loadAdminTickets();
   renderActivityMap();
+  renderAchievementForm();
+  loadAchievementsAdmin();
 }
 
 function renderAdminShell() {
@@ -94,7 +104,14 @@ function renderAdminShell() {
           <a class="btn btn-secondary btn-block" href="/tickets" style="margin-top:12px">Открыть тикеты →</a>
         </div>
       </div>
-    </div>`;
+    </div>
+
+    <h2 style="margin-top:56px;font-size:22px">Ачивки</h2>
+    <p class="muted" style="font-size:13.5px;max-width:64ch;margin:0 0 18px">Создавайте ачивки со своими картинками/эмодзи, условиями получения и рамками аватара.</p>
+    <div id="achievements-list" class="grid">${skeletonCards(3)}</div>
+
+    <h3 style="margin-top:32px">Новая ачивка</h3>
+    <div id="achievement-form-card"></div>`;
 
   document.querySelectorAll("#admin-periods [data-range]").forEach((btn) =>
     btn.addEventListener("click", () => {
@@ -284,4 +301,141 @@ async function renderActivityMap() {
   );
 
   fitYandexGeoObjects(adminMapCtx, { maxZoom: 12 });
+}
+
+/* ---------------------------------------------------------- ачивки ------ */
+
+function achievementCardHtml(a) {
+  const visual = a.image_url
+    ? `<img src="${a.image_url}" alt="" style="width:40px;height:40px;object-fit:contain" />`
+    : `<div style="font-size:1.8rem">${a.icon}</div>`;
+  const frameVisual = a.avatar_frame_image_url
+    ? `<img src="${a.avatar_frame_image_url}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:50%" title="Рамка: картинка" />`
+    : a.avatar_frame_code
+      ? `<span class="tag tag-neutral">рамка: ${escapeHtml(a.avatar_frame_code)}</span>`
+      : "";
+
+  return `
+    <div class="card" id="achievement-${a.id}">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${visual}
+        <div style="flex:1">
+          <strong style="font-family:var(--font-heading);font-weight:600">${escapeHtml(a.title)}</strong>
+          <p class="muted" style="margin:2px 0;font-size:13px">${escapeHtml(a.description)}</p>
+          <p class="muted" style="margin:0;font-size:11.5px">${CRITERIA_LABELS[a.criteria_type] || a.criteria_type} ≥ ${a.criteria_value} · +${a.points_reward} баллов${a.season ? ` · сезон: ${escapeHtml(a.season)}` : ""}</p>
+        </div>
+        ${frameVisual}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          Значок (картинка)
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-image-upload="${a.id}" />
+        </label>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          Рамка (картинка)
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-frame-upload="${a.id}" />
+        </label>
+        <button class="btn btn-danger btn-sm" data-delete="${a.id}">Удалить</button>
+      </div>
+    </div>`;
+}
+
+async function loadAchievementsAdmin() {
+  const el = document.getElementById("achievements-list");
+  try {
+    const achievements = await api.get("/achievements");
+    el.innerHTML = achievements.length
+      ? achievements.map(achievementCardHtml).join("")
+      : '<p class="muted">Ачивок пока нет.</p>';
+
+    el.querySelectorAll("[data-image-upload]").forEach((input) => {
+      input.addEventListener("change", () => uploadAchievementAsset(input, "image"));
+    });
+    el.querySelectorAll("[data-frame-upload]").forEach((input) => {
+      input.addEventListener("change", () => uploadAchievementAsset(input, "frame-image"));
+    });
+    el.querySelectorAll("[data-delete]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Удалить эту ачивку?")) return;
+        try {
+          await api.del(`/admin/achievements/${btn.dataset.delete}`);
+          loadAchievementsAdmin();
+        } catch (err) {
+          toast(err.message, "error");
+        }
+      });
+    });
+  } catch (e) {
+    el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function uploadAchievementAsset(input, kind) {
+  const file = input.files[0];
+  if (!file) return;
+  const achievementId = kind === "image" ? input.dataset.imageUpload : input.dataset.frameUpload;
+  const formData = new FormData();
+  formData.append("photo", file);
+  try {
+    await api.postForm(`/admin/achievements/${achievementId}/${kind}`, formData);
+    toast("Загружено", "success");
+    loadAchievementsAdmin();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function renderAchievementForm() {
+  const card = document.getElementById("achievement-form-card");
+  card.innerHTML = `
+    <div id="achievement-form-alert"></div>
+    <form id="achievement-form" style="max-width:520px">
+      <div class="field"><label for="af-code">Код (латиницей, уникальный)</label><input class="input" type="text" id="af-code" required /></div>
+      <div class="field"><label for="af-title">Название</label><input class="input" type="text" id="af-title" required /></div>
+      <div class="field"><label for="af-description">Описание / как получить</label><textarea class="input" id="af-description" rows="2" required></textarea></div>
+      <div class="field"><label for="af-icon">Эмодзи-иконка (пока нет картинки)</label><input class="input" type="text" id="af-icon" value="🏅" maxlength="4" /></div>
+      <div class="field">
+        <label for="af-criteria-type">Условие получения</label>
+        <select class="input" id="af-criteria-type">
+          ${Object.entries(CRITERIA_LABELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field"><label for="af-criteria-value">Значение условия</label><input class="input" type="number" id="af-criteria-value" value="1" min="1" required /></div>
+      <div class="field"><label for="af-points">Награда в баллах</label><input class="input" type="number" id="af-points" value="0" min="0" /></div>
+      <div class="field"><label for="af-season">Сезон (только для «уборок за сезон»)</label>
+        <select class="input" id="af-season">
+          <option value="">—</option>
+          <option value="winter">Зима</option>
+          <option value="spring">Весна</option>
+          <option value="summer">Лето</option>
+          <option value="autumn">Осень</option>
+        </select>
+      </div>
+      <div class="field"><label for="af-frame-code">Код рамки аватара (опционально, латиницей)</label><input class="input" type="text" id="af-frame-code" placeholder="например, platinum" /></div>
+      <button class="btn btn-primary" type="submit">Создать ачивку</button>
+    </form>`;
+
+  document.getElementById("achievement-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("achievement-form-alert");
+    alertEl.innerHTML = "";
+    try {
+      await api.post("/admin/achievements", {
+        code: document.getElementById("af-code").value.trim(),
+        title: document.getElementById("af-title").value.trim(),
+        description: document.getElementById("af-description").value.trim(),
+        icon: document.getElementById("af-icon").value.trim() || "🏅",
+        criteria_type: document.getElementById("af-criteria-type").value,
+        criteria_value: parseInt(document.getElementById("af-criteria-value").value, 10),
+        points_reward: parseInt(document.getElementById("af-points").value, 10) || 0,
+        season: document.getElementById("af-season").value || null,
+        avatar_frame_code: document.getElementById("af-frame-code").value.trim() || null,
+      });
+      toast("Ачивка создана", "success");
+      document.getElementById("achievement-form").reset();
+      loadAchievementsAdmin();
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
 }

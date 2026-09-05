@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Чистый берег API"
+    app_name: str = "GoodWill API"
     environment: str = "development"
     database_url: str = "sqlite+aiosqlite:///./local.db"
 
@@ -19,7 +19,15 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["*"]
 
-    seed_on_startup: bool = False
+    # Публичный адрес сайта (со схемой, без слэша в конце) — используется для абсолютных
+    # ссылок на статику (логотип) в HTML-письмах. Если пусто, письма отправляются без логотипа.
+    public_base_url: str = ""
+
+    # Автосоздание единственного администратора при старте (см. app/db/seed_admin.py).
+    # Если любое из полей пусто — бутстрап пропускается (не трогает существующих админов).
+    admin_username: str = ""
+    admin_email: str = ""
+    admin_password: str = ""
 
     # SMTP (отправка кода подтверждения email). Если smtp_host пуст — письма не отправляются,
     # код только логируется (для локальной разработки/тестов без реального почтового сервера).
@@ -27,7 +35,7 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
-    smtp_from: str = "no-reply@chistybereg.ru"
+    smtp_from: str = "no-reply@goodwill.ru"
     smtp_use_tls: bool = True
     email_verification_code_ttl_minutes: int = 15
 

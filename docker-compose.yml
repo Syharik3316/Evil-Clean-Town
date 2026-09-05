@@ -1,15 +1,19 @@
 services:
+  # Локальный Postgres в Docker — включён профилем "local-db" (см. COMPOSE_PROFILES в
+  # .env). Чтобы подключиться к внешней БД (не этой), очистите COMPOSE_PROFILES в .env —
+  # этот сервис не будет запускаться, а backend/grafana пойдут на DB_HOST:DB_PORT.
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    profiles: ["local-db"]
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-chistybereg}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chistybereg}
-      POSTGRES_DB: ${POSTGRES_DB:-chistybereg}
+      POSTGRES_USER: ${POSTGRES_USER:-goodwill}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goodwill}
+      POSTGRES_DB: ${POSTGRES_DB:-goodwill}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chistybereg}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-goodwill}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,11 +24,12 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chistybereg}:${POSTGRES_PASSWORD:-chistybereg}@db:5432/${POSTGRES_DB:-chistybereg}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-goodwill}:${POSTGRES_PASSWORD:-goodwill}@${DB_HOST:-db}:${DB_PORT:-5432}/${POSTGRES_DB:-goodwill}
       UPLOAD_DIR: /app/uploads
     depends_on:
       db:
         condition: service_healthy
+        required: false
     volumes:
       - uploads:/app/uploads
 
@@ -32,7 +37,7 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend:/usr/share/nginx/html:ro
@@ -46,7 +51,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-change-me}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-goodwill}
       # Анонимный доступ уровня "Viewer" + разрешение на встраивание в iframe — нужны,
       # чтобы дашборд открывался прямо на /admin сайта без отдельного логина в Grafana.
       # Это делает сам дашборд (агрегированную статистику, без личных данных пользователей)
@@ -56,14 +61,17 @@ services:
       GF_AUTH_ANONYMOUS_ORG_NAME: "Main Org."
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
-      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-change-me}
-      GRAFANA_DB_NAME: ${POSTGRES_DB:-chistybereg}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-goodwill}
+      GRAFANA_DB_NAME: ${POSTGRES_DB:-goodwill}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       db:
         condition: service_healthy
+        required: false
       backend:
         condition: service_started
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.event import EventStatus, EventType, RegistrationStatus
 
@@ -108,7 +108,9 @@ class ApplicantDecisionRequest(BaseModel):
 
 
 class BonusPointsRequest(BaseModel):
-    amount: float
+    # организаторы могут поощрять волонтёров бонусными баллами, но не заменять собой
+    # админскую систему начисления — максимум 100 баллов за одно начисление
+    amount: float = Field(gt=0, le=100)
     reason: str
 
 

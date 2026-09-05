@@ -1,4 +1,4 @@
-const CACHE_NAME = "chistybereg-v2";
+const CACHE_NAME = "goodwill-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "/js/yamaps.js",
   "/manifest.json",
   "/logo.png",
+  "/favicon.ico",
   "/assets/satellite.webp",
 ];
 

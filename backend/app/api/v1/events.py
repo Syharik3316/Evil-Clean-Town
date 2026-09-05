@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user, get_current_user_optional, get_db
+from app.core.deps import ensure_organization_approved, get_current_user, get_current_user_optional, get_db
 from app.models.event import Event, EventRegistration, EventRole, EventStatus, EventType, RegistrationStatus
 from app.models.gamification import UserAchievement
 from app.models.lesson import Lesson, LessonStatus, UserLessonProgress
@@ -115,6 +115,7 @@ async def create_event(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Администратор не создаёт мероприятия, а модерирует их в тикетах",
         )
+    ensure_organization_approved(user)
     if payload.event_type == EventType.cleanup and payload.site_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

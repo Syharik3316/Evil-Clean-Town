@@ -63,15 +63,25 @@ async function apiFetch(path, options = {}) {
   return res;
 }
 
+class ApiError extends Error {
+  constructor(message, status, body) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function apiJson(path, options = {}) {
   const res = await apiFetch(path, options);
   if (!res.ok) {
     let detail = `Ошибка запроса (${res.status})`;
+    let body = null;
     try {
-      const err = await res.json();
-      if (err.detail) detail = typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail);
+      body = await res.json();
+      if (body.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
     } catch (e) {}
-    throw new Error(detail);
+    throw new ApiError(detail, res.status, body);
   }
   if (res.status === 204) return null;
   return res.json();

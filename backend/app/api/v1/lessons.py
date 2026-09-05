@@ -3,7 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.deps import get_current_user, get_current_user_optional, get_db, require_admin, require_organizer
+from app.core.deps import (
+    ensure_organization_approved,
+    get_current_user,
+    get_current_user_optional,
+    get_db,
+    require_admin,
+    require_organizer,
+)
 from app.models.lesson import CardContentType, Lesson, LessonCard, LessonStatus, UserLessonProgress
 from app.models.user import User, UserRole
 from app.schemas.lesson import (
@@ -117,6 +124,7 @@ async def create_lesson(
     user: User = Depends(require_organizer),
     db: AsyncSession = Depends(get_db),
 ):
+    ensure_organization_approved(user)
     status_value = LessonStatus.published if user.role == UserRole.admin else LessonStatus.draft
     lesson = Lesson(**payload.model_dump(), created_by_id=user.id, status=status_value)
     db.add(lesson)

@@ -31,7 +31,9 @@ async function initLessonsPage() {
 
 async function renderLessonOverview() {
   const root = document.getElementById("lessons-root");
-  const canAuthor = lessonsUser && (lessonsUser.role === "organizer" || lessonsUser.role === "admin");
+  const orgApproved = !lessonsUser || !lessonsUser.organization || lessonsUser.organization.status === "approved";
+  const canAuthor = lessonsUser && (lessonsUser.role === "admin" || (lessonsUser.role === "organizer" && orgApproved));
+  const orgPending = lessonsUser && lessonsUser.role === "organizer" && !orgApproved;
   const totalPoints = lessonsAll.reduce((sum, l) => sum + l.points_reward, 0);
   const doneCount = lessonsAll.filter((l) => lessonsCompleted.includes(l.id)).length;
   const first = lessonsAll[0];
@@ -108,6 +110,7 @@ async function renderLessonOverview() {
       </div>
     </div>
 
+    ${orgPending ? '<div class="note" style="margin-top:32px">Создание курсов станет доступно после подтверждения вашей организации администрацией.</div>' : ""}
     ${canAuthor ? '<div id="author-area" style="border-top:1px solid var(--color-divider);margin-top:48px;padding-top:36px"></div>' : ""}
   `;
 
