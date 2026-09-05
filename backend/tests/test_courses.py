@@ -53,6 +53,46 @@ async def test_organizer_creates_submits_and_admin_approves_course(client, db_se
     assert any(n["type"] == "course_approved" for n in res.json())
 
 
+async def test_video_card_requires_url_and_is_returned_to_public(client, db_session):
+    await create_user(db_session, "videoorg@example.com", UserRole.organizer)
+    org_token = await login(client, "videoorg@example.com")
+
+    res = await client.post(
+        "/api/v1/lessons",
+        json={"title": "Видеокурс", "slug": "video-course", "summary": "x", "points_reward": 5},
+        headers=auth_headers(org_token),
+    )
+    lesson_id = res.json()["id"]
+
+    # без video_url видео-карточку создать нельзя
+    res = await client.post(
+        f"/api/v1/lessons/{lesson_id}/cards",
+        json={"title": "Видео", "content_type": "video"},
+        headers=auth_headers(org_token),
+    )
+    assert res.status_code == 422
+
+    res = await client.post(
+        f"/api/v1/lessons/{lesson_id}/cards",
+        json={"title": "Видео", "content_type": "video", "video_url": "https://example.com/lesson.mp4"},
+        headers=auth_headers(org_token),
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["video_url"] == "https://example.com/lesson.mp4"
+
+    # админ публикует, чтобы карточка стала видна не-автору через публичный эндпоинт
+    await create_user(db_session, "videoadmin@example.com", UserRole.admin)
+    admin_token = await login(client, "videoadmin@example.com")
+    await client.post(f"/api/v1/lessons/{lesson_id}/submit", headers=auth_headers(org_token))
+    await client.post(f"/api/v1/admin/tickets/courses/{lesson_id}/approve", headers=auth_headers(admin_token))
+
+    res = await client.get(f"/api/v1/lessons/{lesson_id}")
+    assert res.status_code == 200
+    cards = res.json()["cards"]
+    assert cards[0]["content_type"] == "video"
+    assert cards[0]["video_url"] == "https://example.com/lesson.mp4"
+
+
 async def test_organizer_cannot_edit_others_course(client, db_session):
     await create_user(db_session, "orgM@example.com", UserRole.organizer)
     org_token = await login(client, "orgM@example.com")

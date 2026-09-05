@@ -54,6 +54,9 @@ def _patch_email_sending(monkeypatch):
     import app.services.verification as verification_module
 
     monkeypatch.setattr(verification_module, "send_verification_code", _capture_send_verification_code)
+    # тот же перехват для писем сброса пароля (см. auth.py /forgot-password) — иначе
+    # тесты попытаются реально отправить письмо через настоящий SMTP из .env
+    monkeypatch.setattr(verification_module, "send_password_reset_code", _capture_send_verification_code)
 
 
 @pytest_asyncio.fixture

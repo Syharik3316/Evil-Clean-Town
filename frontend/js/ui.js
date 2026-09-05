@@ -165,6 +165,123 @@ function showEmailCodeModal(email, onVerified) {
   });
 }
 
+// Модалка восстановления пароля (login.html, ссылка «Забыли пароль?»): шаг 1 — вводим
+// логин/почту и просим код, шаг 2 — вводим код из письма и новый пароль.
+// onReset(tokens) вызывается после успешного POST /auth/reset-password.
+function showForgotPasswordModal(onReset) {
+  let modal = document.getElementById("forgot-password-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.id = "forgot-password-modal";
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="modal">
+        <h2>Восстановление пароля</h2>
+        <div id="fp-step-login">
+          <p class="muted" style="font-size:13.5px">Введите логин или почту — если аккаунт существует, на привязанную почту придёт код для сброса пароля.</p>
+          <div id="fp-login-alert"></div>
+          <form id="fp-login-form">
+            <div class="field"><label for="fp-login">Логин или почта</label><input class="input" type="text" id="fp-login" required autofocus /></div>
+            <div class="dialog-actions">
+              <button class="btn btn-secondary" type="button" id="fp-cancel-1">Отмена</button>
+              <button class="btn btn-primary" type="submit">Отправить код</button>
+            </div>
+          </form>
+        </div>
+        <div id="fp-step-reset" hidden>
+          <p class="muted" style="font-size:13.5px">Если аккаунт <strong id="fp-login-echo"></strong> существует, код уже отправлен на привязанную почту.</p>
+          <div id="fp-reset-alert"></div>
+          <form id="fp-reset-form">
+            <div class="field"><label for="fp-code">Код из письма</label><input class="input" type="text" id="fp-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required /></div>
+            <div class="field"><label for="fp-new-password">Новый пароль</label><input class="input" type="password" id="fp-new-password" autocomplete="new-password" minlength="6" required /></div>
+            <p class="muted" style="font-size:12.5px;margin:0 0 4px">Не пришёл код? <a href="#" id="fp-resend">Отправить ещё раз</a></p>
+            <div class="dialog-actions">
+              <button class="btn btn-secondary" type="button" id="fp-cancel-2">Отмена</button>
+              <button class="btn btn-primary" type="submit">Сбросить пароль</button>
+            </div>
+          </form>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  let currentLogin = "";
+  const stepLogin = document.getElementById("fp-step-login");
+  const stepReset = document.getElementById("fp-step-reset");
+
+  function close() {
+    modal.hidden = true;
+  }
+  function showStepLogin() {
+    stepLogin.hidden = false;
+    stepReset.hidden = true;
+    document.getElementById("fp-login-alert").innerHTML = "";
+    document.getElementById("fp-login").value = "";
+  }
+  async function requestCode(login) {
+    currentLogin = login;
+    await api.post("/auth/forgot-password", { login });
+    document.getElementById("fp-login-echo").textContent = login;
+    document.getElementById("fp-reset-alert").innerHTML = "";
+    document.getElementById("fp-code").value = "";
+    document.getElementById("fp-new-password").value = "";
+    stepLogin.hidden = true;
+    stepReset.hidden = false;
+  }
+
+  showStepLogin();
+  modal.hidden = false;
+
+  // клонируем формы, чтобы не копить обработчики предыдущих открытий
+  const loginForm = document.getElementById("fp-login-form");
+  const freshLoginForm = loginForm.cloneNode(true);
+  loginForm.replaceWith(freshLoginForm);
+  const resetForm = document.getElementById("fp-reset-form");
+  const freshResetForm = resetForm.cloneNode(true);
+  resetForm.replaceWith(freshResetForm);
+
+  document.getElementById("fp-cancel-1").addEventListener("click", close);
+  document.getElementById("fp-cancel-2").addEventListener("click", close);
+
+  freshLoginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("fp-login-alert");
+    const login = document.getElementById("fp-login").value.trim();
+    try {
+      await requestCode(login);
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+
+  document.getElementById("fp-resend").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("fp-reset-alert");
+    try {
+      await api.post("/auth/forgot-password", { login: currentLogin });
+      toast("Код отправлен повторно", "success");
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+
+  freshResetForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById("fp-reset-alert");
+    alertEl.innerHTML = "";
+    const code = document.getElementById("fp-code").value.trim();
+    const new_password = document.getElementById("fp-new-password").value;
+    try {
+      const tokens = await api.post("/auth/reset-password", { login: currentLogin, code, new_password });
+      close();
+      onReset(tokens);
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error">${escapeHtml(err.message)}</div>`;
+    }
+  });
+}
+
 function initDropdown(triggerEl, panelEl) {
   if (!triggerEl || !panelEl) return;
 

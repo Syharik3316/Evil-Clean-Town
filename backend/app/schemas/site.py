@@ -26,6 +26,15 @@ class SatelliteLayerCreate(BaseModel):
     order_index: int = 0
 
 
+class SatelliteLayerUpdate(BaseModel):
+    captured_at: date | None = None
+    layer_type: LayerType | None = None
+    label: str | None = None
+    image_url: str | None = None
+    bounds: list | None = None
+    order_index: int | None = None
+
+
 class CoastlineSiteOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,3 +56,11 @@ class CoastlineSiteCreate(BaseModel):
     description: str | None = None
     lat: float
     lon: float
+
+
+class CoastlineSiteUpdate(BaseModel):
+    name: str | None = None
+    region: str | None = None
+    description: str | None = None
+    lat: float | None = None
+    lon: float | None = None

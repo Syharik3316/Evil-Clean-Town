@@ -115,3 +115,32 @@ async def send_verification_code(to_email: str, code: str) -> None:
         body_html=body_html,
     )
     await _send(to_email, "Код подтверждения — GoodWill", text_body, html_body)
+
+
+async def send_password_reset_code(to_email: str, code: str) -> None:
+    ttl = settings.email_verification_code_ttl_minutes
+    text_body = (
+        "Код для сброса пароля: "
+        f"{code}\n\nКод действителен {ttl} минут. "
+        "Если вы не запрашивали смену пароля на GoodWill — просто проигнорируйте это письмо, "
+        "пароль останется прежним."
+    )
+    body_html = f"""
+      <p style="margin:0 0 20px;font-size:14px;color:{TEXT_MUTED};line-height:1.5">
+        Кто-то (надеемся, вы) запросил сброс пароля на GoodWill. Введите этот код на сайте,
+        чтобы задать новый пароль:
+      </p>
+      <div style="margin:0 0 20px;padding:18px 0;text-align:center;background:{CODE_BG};border-radius:1px">
+        <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:{PRIMARY_DARK};font-family:{FONT_STACK}">{code}</span>
+      </div>
+      <p style="margin:0;font-size:13px;color:{TEXT_MUTED};line-height:1.5">
+        Код действителен {ttl} минут. Если вы не запрашивали смену пароля — просто
+        проигнорируйте это письмо, пароль останется прежним.
+      </p>
+    """
+    html_body = _wrap_email_html(
+        preheader=f"Код для сброса пароля: {code}",
+        title="Восстановление пароля",
+        body_html=body_html,
+    )
+    await _send(to_email, "Восстановление пароля — GoodWill", text_body, html_body)

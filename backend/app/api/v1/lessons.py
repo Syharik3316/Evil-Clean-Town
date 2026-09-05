@@ -44,6 +44,7 @@ def _to_public_card(card: LessonCard) -> LessonCardPublic:
         content_type=card.content_type,
         title=card.title,
         body=card.body,
+        video_url=card.video_url,
         quiz_question=quiz_question,
         quiz_options=quiz_options,
     )

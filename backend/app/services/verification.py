@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.models.mixins import ensure_aware, utcnow
 from app.models.user import User
 from app.models.verification import EmailVerificationCode
-from app.services.email import send_verification_code
+from app.services.email import send_password_reset_code, send_verification_code
 
 MAX_CODE_ATTEMPTS = 5
 
@@ -18,23 +18,35 @@ def _hash_code(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 
-async def issue_email_verification_code(db: AsyncSession, user: User, target_email: str | None = None) -> None:
+async def issue_email_verification_code(
+    db: AsyncSession, user: User, target_email: str | None = None, purpose: str = "verify"
+) -> None:
     code = f"{secrets.randbelow(1_000_000):06d}"
     db.add(
         EmailVerificationCode(
             user_id=user.id,
             code_hash=_hash_code(code),
+            purpose=purpose,
             expires_at=utcnow() + timedelta(minutes=settings.email_verification_code_ttl_minutes),
         )
     )
     await db.flush()
-    await send_verification_code(target_email or user.email, code)
+    if purpose == "password_reset":
+        await send_password_reset_code(target_email or user.email, code)
+    else:
+        await send_verification_code(target_email or user.email, code)
 
 
-async def consume_email_verification_code(db: AsyncSession, user: User, code: str) -> bool:
+async def consume_email_verification_code(
+    db: AsyncSession, user: User, code: str, purpose: str = "verify"
+) -> bool:
     result = await db.execute(
         select(EmailVerificationCode)
-        .where(EmailVerificationCode.user_id == user.id, EmailVerificationCode.consumed_at.is_(None))
+        .where(
+            EmailVerificationCode.user_id == user.id,
+            EmailVerificationCode.consumed_at.is_(None),
+            EmailVerificationCode.purpose == purpose,
+        )
         .order_by(EmailVerificationCode.created_at.desc())
     )
     record = result.scalars().first()

@@ -12,6 +12,7 @@ class CardContentType(str, enum.Enum):
     text = "text"
     image = "image"
     quiz = "quiz"
+    video = "video"
 
 
 class LessonStatus(str, enum.Enum):
@@ -50,6 +51,8 @@ class LessonCard(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     # for quiz cards: {"question": str, "options": [str], "correct_index": int}
     quiz_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # for video cards: прямая ссылка на видеофайл (см. anti-skip плеер во frontend/js/lessons.js)
+    video_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     lesson: Mapped[Lesson] = relationship(back_populates="cards")
 

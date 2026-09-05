@@ -38,6 +38,28 @@ class ResendCodeRequest(BaseModel):
     email: EmailStr
 
 
+class ForgotPasswordRequest(BaseModel):
+    login: str  # логин или email — определяем сами, что из этого прислали
+
+
+class ForgotPasswordSentOut(BaseModel):
+    status: str = "reset_code_sent"
+    login: str
+
+
+class ResetPasswordRequest(BaseModel):
+    login: str
+    code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Пароль должен быть не короче 6 символов")
+        return v
+
+
 class UserLogin(BaseModel):
     username: str
     password: str

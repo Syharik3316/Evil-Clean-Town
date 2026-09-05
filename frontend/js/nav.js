@@ -36,6 +36,7 @@ const NAV_LINKS_BY_ROLE = {
     ["/events", "Мероприятия"],
     ["/tickets", "Тикеты"],
     ["/admin", "Мониторинг"],
+    ["/admin-sites", "Конструктор карты"],
     ["/reports", "Репорты"],
     ["/leaderboard", "Лидерборд"],
   ],

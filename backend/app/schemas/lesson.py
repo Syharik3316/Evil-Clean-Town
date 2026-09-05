@@ -1,14 +1,21 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.models.lesson import CardContentType, LessonStatus
 
 
 class LessonCardCreate(BaseModel):
     title: str
-    body: str
+    body: str = ""
     content_type: CardContentType = CardContentType.text
     order_index: int = 0
     quiz_data: dict | None = None
+    video_url: str | None = None
+
+    @model_validator(mode="after")
+    def _require_video_url(self):
+        if self.content_type == CardContentType.video and not self.video_url:
+            raise ValueError("Для видео-карточки нужна ссылка на видео (video_url)")
+        return self
 
 
 class LessonCardUpdate(BaseModel):
@@ -17,6 +24,7 @@ class LessonCardUpdate(BaseModel):
     content_type: CardContentType | None = None
     order_index: int | None = None
     quiz_data: dict | None = None
+    video_url: str | None = None
 
 
 class LessonCardOut(BaseModel):
@@ -28,6 +36,7 @@ class LessonCardOut(BaseModel):
     title: str
     body: str
     quiz_data: dict | None
+    video_url: str | None = None
 
 
 class LessonCardPublic(BaseModel):
@@ -40,6 +49,7 @@ class LessonCardPublic(BaseModel):
     content_type: CardContentType
     title: str
     body: str
+    video_url: str | None = None
     quiz_question: str | None = None
     quiz_options: list[str] | None = None
 

@@ -222,3 +222,69 @@ async def test_change_email_requires_confirmation_code(client):
     assert res.status_code == 200
     assert res.json()["email"] == "emailnew@example.com"
     assert res.json()["pending_email"] is None
+
+
+async def test_forgot_password_reset_flow(client):
+    await register_and_verify(client, username="forgetful", email="forgetful@example.com")
+
+    res = await client.post("/api/v1/auth/forgot-password", json={"login": "forgetful@example.com"})
+    assert res.status_code == 200
+    code = sent_verification_codes["forgetful@example.com"]
+
+    wrong_code = "000000" if code != "000000" else "999999"
+    res = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"login": "forgetful@example.com", "code": wrong_code, "new_password": "brandnew123"},
+    )
+    assert res.status_code == 400
+
+    res = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"login": "forgetful", "code": code, "new_password": "brandnew123"},
+    )
+    assert res.status_code == 200, res.text
+    assert "access_token" in res.json()
+
+    res = await client.post("/api/v1/auth/login", json={"username": "forgetful", "password": "password123"})
+    assert res.status_code == 401
+    res = await client.post("/api/v1/auth/login", json={"username": "forgetful", "password": "brandnew123"})
+    assert res.status_code == 200
+
+
+async def test_forgot_password_unknown_login_does_not_leak(client):
+    res = await client.post("/api/v1/auth/forgot-password", json={"login": "nosuchuser@example.com"})
+    assert res.status_code == 200
+    assert res.json()["login"] == "nosuchuser@example.com"
+
+    res = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"login": "nosuchuser@example.com", "code": "123456", "new_password": "whatever123"},
+    )
+    assert res.status_code == 400
+
+
+async def test_reset_password_code_is_not_reusable_as_email_verification(client):
+    """Код для сброса пароля и код подтверждения email хранятся в одной таблице с разным
+    purpose — один нельзя подсунуть вместо другого."""
+    await client.post(
+        "/api/v1/auth/register",
+        json={"username": "purposecheck", "email": "purposecheck@example.com", "password": "password123", "display_name": "П"},
+    )
+    verify_code = sent_verification_codes["purposecheck@example.com"]
+
+    res = await client.post("/api/v1/auth/forgot-password", json={"login": "purposecheck@example.com"})
+    assert res.status_code == 200
+    reset_code = sent_verification_codes["purposecheck@example.com"]
+
+    # код регистрации не подходит для сброса пароля
+    res = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"login": "purposecheck", "code": verify_code, "new_password": "brandnew123"},
+    )
+    assert res.status_code == 400
+
+    # код сброса пароля не подходит для подтверждения email
+    res = await client.post(
+        "/api/v1/auth/verify-email", json={"email": "purposecheck@example.com", "code": reset_code}
+    )
+    assert res.status_code == 400

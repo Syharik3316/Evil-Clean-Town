@@ -13,6 +13,9 @@ class EmailVerificationCode(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # "verify" (регистрация/смена email) или "password_reset" — коды разных сценариев
+    # хранятся в одной таблице, но не должны быть взаимозаменяемы (см. services/verification.py).
+    purpose: Mapped[str] = mapped_column(String(30), default="verify", nullable=False)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

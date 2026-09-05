@@ -171,6 +171,9 @@ async function renderLessonDetail(lessonId) {
 
   const textCards = lesson.cards.filter((c) => c.content_type !== "quiz");
   const quizCards = lesson.cards.filter((c) => c.content_type === "quiz");
+  const videoCards = textCards.filter((c) => c.content_type === "video");
+  const hasVideo = videoCards.length > 0;
+  const gateCtx = { lesson, quizCards, canEarnPoints, isOwner, done };
 
   root.innerHTML = `
     <div class="kicker">Обучающие модули</div>
@@ -221,41 +224,133 @@ async function renderLessonDetail(lessonId) {
         <h2 style="font-size:clamp(26px,3vw,34px);margin:10px 0 8px">${escapeHtml(lesson.title)}</h2>
         <p class="muted" style="font-size:15px;max-width:58ch;margin:0 0 30px">${escapeHtml(lesson.summary)}</p>
 
-        ${textCards
-          .map(
-            (c, i) => `
-          <div class="lesson-block">
-            <div class="n">${String(i + 1).padStart(2, "0")}</div>
-            <div class="body">
-              <h3 style="font-size:21px;margin:0 0 8px">${escapeHtml(c.title)}</h3>
-              <p style="font-size:15.5px;line-height:1.6;margin:0">${escapeHtml(c.body)}</p>
-            </div>
-          </div>`
-          )
-          .join("")}
+        ${textCards.map((c, i) => contentCardHtml(c, i)).join("")}
 
-        ${quizCards.map((c) => quizBlockHtml(c, canEarnPoints)).join("")}
-
-        ${
-          lesson.status === "published" && canEarnPoints
-            ? `<div style="border-top:1px solid var(--color-divider);padding-top:26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-                 <button type="button" class="btn btn-primary btn-lg" id="complete-btn">Завершить урок (+${lesson.points_reward} баллов)</button>
-                 <span class="muted" style="font-size:13px">${done ? "Модуль уже засчитан — можно перечитать в любой момент." : "Ответьте на квиз выше, чтобы получить максимум баллов."}</span>
-               </div>`
-            : ""
-        }
-        ${!canEarnPoints && !isOwner ? '<p class="muted" style="border-top:1px solid var(--color-divider);padding-top:26px">Прохождение урока за баллы доступно волонтёрам.</p>' : ""}
+        <div id="quiz-gate">
+          ${hasVideo ? videoLockedNoteHtml() : quizGateHtml(gateCtx)}
+        </div>
 
         <div id="lesson-result" style="margin-top:20px"></div>
         ${isOwner ? '<div id="author-tools" style="margin-top:44px"></div>' : ""}
       </div>
     </div>`;
 
-  bindQuiz();
+  if (!hasVideo) {
+    bindQuiz();
+    document.getElementById("complete-btn")?.addEventListener("click", () => completeLesson(lesson));
+  }
+  bindVideoCards(videoCards, () => revealQuizGate(gateCtx));
 
   if (isOwner) renderAuthorTools(lesson);
+}
 
-  document.getElementById("complete-btn")?.addEventListener("click", () => completeLesson(lesson));
+function contentCardHtml(c, i) {
+  if (c.content_type === "video") return videoBlockHtml(c, i);
+  return `
+    <div class="lesson-block">
+      <div class="n">${String(i + 1).padStart(2, "0")}</div>
+      <div class="body">
+        <h3 style="font-size:21px;margin:0 0 8px">${escapeHtml(c.title)}</h3>
+        <p style="font-size:15.5px;line-height:1.6;margin:0">${escapeHtml(c.body)}</p>
+      </div>
+    </div>`;
+}
+
+const VIDEO_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+function videoBlockHtml(c, i) {
+  return `
+    <div class="lesson-block video-block" data-video-card="${c.id}">
+      <div class="n">${String(i + 1).padStart(2, "0")}</div>
+      <div class="body" style="max-width:none;flex:1">
+        <h3 style="font-size:21px;margin:0 0 8px">${escapeHtml(c.title)}</h3>
+        ${c.body ? `<p style="font-size:15.5px;line-height:1.6;margin:0 0 14px">${escapeHtml(c.body)}</p>` : ""}
+        <div data-video-wrap>
+          <video class="lesson-video" data-video-el src="${escapeHtml(c.video_url)}" controls playsinline controlsList="nodownload noremoteplayback"></video>
+          <div class="video-toolbar">
+            <span class="muted" style="font-size:12px">Скорость:</span>
+            ${VIDEO_RATES.map((r) => `<button type="button" class="rate-btn${r === 1 ? " active" : ""}" data-rate="${r}">${r}×</button>`).join("")}
+            <span class="muted" data-video-progress style="margin-left:auto;font-size:12px">Просмотрено: 0%</span>
+          </div>
+          <p class="muted" style="font-size:11.5px;margin:8px 0 0">Перемотка вперёд заблокирована — придётся посмотреть целиком. Можно пересматривать пройденные фрагменты и менять скорость от 0.5× до 2×.</p>
+        </div>
+        <div class="note" data-video-done hidden style="margin-top:10px"><i class="ph-duotone ph-check-circle"></i> Видео просмотрено полностью</div>
+      </div>
+    </div>`;
+}
+
+/* Блокирует прокрутку вперёд дальше самой дальней просмотренной точки и удерживает
+   скорость в диапазоне 0.5×–2×, чтобы урок нельзя было просто перемотать до конца. */
+function bindVideoCards(videoCards, onAllWatched) {
+  const watched = new Set();
+  document.querySelectorAll("[data-video-card]").forEach((block) => {
+    const cardId = parseInt(block.dataset.videoCard, 10);
+    const video = block.querySelector("[data-video-el]");
+    if (!video) return;
+    const progressEl = block.querySelector("[data-video-progress]");
+    let maxWatched = 0;
+
+    const markWatched = () => {
+      if (watched.has(cardId)) return;
+      watched.add(cardId);
+      const wrap = block.querySelector("[data-video-wrap]");
+      const badge = block.querySelector("[data-video-done]");
+      if (wrap) wrap.hidden = true;
+      if (badge) badge.hidden = false;
+      if (videoCards.every((c) => watched.has(c.id))) onAllWatched();
+    };
+
+    video.addEventListener("seeking", () => {
+      if (video.currentTime > maxWatched + 0.75) video.currentTime = maxWatched;
+    });
+    video.addEventListener("timeupdate", () => {
+      if (video.currentTime > maxWatched) maxWatched = video.currentTime;
+      if (video.duration) {
+        progressEl.textContent = `Просмотрено: ${Math.min(100, Math.round((maxWatched / video.duration) * 100))}%`;
+        if (maxWatched >= video.duration - 0.5) markWatched();
+      }
+    });
+    video.addEventListener("ended", markWatched);
+    video.addEventListener("ratechange", () => {
+      if (video.playbackRate < 0.5) video.playbackRate = 0.5;
+      else if (video.playbackRate > 2) video.playbackRate = 2;
+    });
+
+    block.querySelectorAll("[data-rate]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        video.playbackRate = parseFloat(btn.dataset.rate);
+        block.querySelectorAll("[data-rate]").forEach((b) => b.classList.toggle("active", b === btn));
+      })
+    );
+  });
+}
+
+function videoLockedNoteHtml() {
+  return '<div class="note" id="quiz-locked-note"><i class="ph-duotone ph-lock-simple"></i> Досмотрите видео выше целиком, чтобы открыть итоговый тест и кнопку завершения урока.</div>';
+}
+
+function quizGateHtml({ lesson, quizCards, canEarnPoints, isOwner, done }) {
+  return `
+    ${quizCards.map((c) => quizBlockHtml(c, canEarnPoints)).join("")}
+    ${
+      lesson.status === "published" && canEarnPoints
+        ? `<div style="border-top:1px solid var(--color-divider);padding-top:26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+             <button type="button" class="btn btn-primary btn-lg" id="complete-btn">Завершить урок (+${lesson.points_reward} баллов)</button>
+             <span class="muted" style="font-size:13px">${done ? "Модуль уже засчитан — можно перечитать в любой момент." : "Ответьте на квиз выше, чтобы получить максимум баллов."}</span>
+           </div>`
+        : ""
+    }
+    ${!canEarnPoints && !isOwner ? '<p class="muted" style="border-top:1px solid var(--color-divider);padding-top:26px">Прохождение урока за баллы доступно волонтёрам.</p>' : ""}
+  `;
+}
+
+function revealQuizGate(gateCtx) {
+  const gate = document.getElementById("quiz-gate");
+  if (!gate) return;
+  gate.innerHTML = quizGateHtml(gateCtx);
+  bindQuiz();
+  document.getElementById("complete-btn")?.addEventListener("click", () => completeLesson(gateCtx.lesson));
+  toast("Видео просмотрено — тест открыт", "success");
 }
 
 function quizBlockHtml(card, interactive) {
@@ -405,10 +500,22 @@ function renderAuthorTools(lesson) {
     <div id="author-alert"></div>
     <form id="add-card-form" style="max-width:520px">
       <div class="field"><label for="card-title">Заголовок карточки</label><input class="input" type="text" id="card-title" required /></div>
-      <div class="field"><label for="card-body">Текст</label><textarea class="input" id="card-body" rows="3"></textarea></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13.5px">
-        <input type="checkbox" id="card-is-quiz" style="width:auto" /> Это квиз
-      </label>
+      <div class="field">
+        <label for="card-type">Тип карточки</label>
+        <select class="input" id="card-type">
+          <option value="text">Текст</option>
+          <option value="video">Видео</option>
+          <option value="quiz">Квиз</option>
+        </select>
+      </div>
+      <div class="field" id="card-body-field"><label for="card-body">Текст</label><textarea class="input" id="card-body" rows="3"></textarea></div>
+      <div id="video-fields" hidden>
+        <div class="field">
+          <label for="video-url">Ссылка на видео (прямой URL .mp4/.webm)</label>
+          <input class="input" type="url" id="video-url" placeholder="https://.../lesson.mp4" />
+        </div>
+        <p class="muted" style="font-size:12.5px;margin:-6px 0 14px">Волонтёр не сможет перемотать видео вперёд, не досмотрев до этого места, — так итоговый тест открывается только после честного просмотра. Скорость 0.5×–2× разрешена.</p>
+      </div>
       <div id="quiz-fields" hidden>
         <div class="field"><label for="quiz-question">Вопрос</label><input class="input" type="text" id="quiz-question" /></div>
         <div class="field"><label for="quiz-options">Варианты ответа (через ;)</label><input class="input" type="text" id="quiz-options" placeholder="Вариант 1;Вариант 2;Вариант 3" /></div>
@@ -421,25 +528,30 @@ function renderAuthorTools(lesson) {
       ${canSubmit ? "" : '<p class="muted" style="font-size:12.5px;margin-top:10px">Курс уже отправлен или опубликован — новые карточки применятся сразу.</p>'}
     </form>`;
 
-  document.getElementById("card-is-quiz").addEventListener("change", (e) => {
-    document.getElementById("quiz-fields").hidden = !e.target.checked;
+  document.getElementById("card-type").addEventListener("change", (e) => {
+    const type = e.target.value;
+    document.getElementById("quiz-fields").hidden = type !== "quiz";
+    document.getElementById("video-fields").hidden = type !== "video";
+    document.getElementById("card-body-field").hidden = type === "quiz";
   });
 
   document.getElementById("add-card-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const alertEl = document.getElementById("author-alert");
-    const isQuiz = document.getElementById("card-is-quiz").checked;
+    const type = document.getElementById("card-type").value;
     const payload = {
       title: document.getElementById("card-title").value.trim(),
       body: document.getElementById("card-body").value.trim(),
-      content_type: isQuiz ? "quiz" : "text",
-      quiz_data: isQuiz
-        ? {
-            question: document.getElementById("quiz-question").value.trim(),
-            options: document.getElementById("quiz-options").value.split(";").map((s) => s.trim()).filter(Boolean),
-            correct_index: parseInt(document.getElementById("quiz-correct").value, 10) || 0,
-          }
-        : null,
+      content_type: type,
+      video_url: type === "video" ? document.getElementById("video-url").value.trim() : null,
+      quiz_data:
+        type === "quiz"
+          ? {
+              question: document.getElementById("quiz-question").value.trim(),
+              options: document.getElementById("quiz-options").value.split(";").map((s) => s.trim()).filter(Boolean),
+              correct_index: parseInt(document.getElementById("quiz-correct").value, 10) || 0,
+            }
+          : null,
     };
     try {
       await api.post(`/lessons/${lesson.id}/cards`, payload);

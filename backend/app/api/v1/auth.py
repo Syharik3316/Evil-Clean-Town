@@ -9,9 +9,12 @@ from app.models.mixins import utcnow
 from app.models.user import Organization, User, UserRole
 from app.models.verification import LoginEvent
 from app.schemas.user import (
+    ForgotPasswordRequest,
+    ForgotPasswordSentOut,
     OrganizerRegister,
     RefreshRequest,
     ResendCodeRequest,
+    ResetPasswordRequest,
     TokenPair,
     UserLogin,
     UserRegister,
@@ -143,6 +146,39 @@ async def resend_code(payload: ResendCodeRequest, db: AsyncSession = Depends(get
         await issue_email_verification_code(db, user)
         await db.commit()
     return VerificationSentOut(email=payload.email)
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordSentOut)
+async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(User).where((User.username == payload.login) | (User.email == payload.login))
+    )
+    user = result.scalar_one_or_none()
+    # тот же ответ независимо от того, найден ли пользователь — чтобы не палить,
+    # какие логины/email зарегистрированы (см. resend_code выше)
+    if user is not None:
+        await issue_email_verification_code(db, user, purpose="password_reset")
+        await db.commit()
+    return ForgotPasswordSentOut(login=payload.login)
+
+
+@router.post("/reset-password", response_model=TokenPair)
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(User).where((User.username == payload.login) | (User.email == payload.login))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный или просроченный код")
+
+    ok = await consume_email_verification_code(db, user, payload.code, purpose="password_reset")
+    if not ok:
+        await db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный или просроченный код")
+
+    user.password_hash = hash_password(payload.new_password)
+    await db.commit()
+    return _token_pair(user.id)
 
 
 @router.post("/refresh", response_model=TokenPair)
