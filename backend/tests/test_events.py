@@ -324,3 +324,29 @@ async def test_bonus_points_awarded_by_organizer(client, db_session):
 
     me = await client.get("/api/v1/users/me", headers=auth_headers(vol_token))
     assert me.json()["points_total"] == 10
+
+
+async def test_bonus_points_capped_at_100(client, db_session):
+    await create_user(db_session, "org7b@example.com", UserRole.organizer)
+    org_token = await login(client, "org7b@example.com")
+    site_id = await _create_site(db_session)
+    event_id = await _create_event(client, db_session, org_token, site_id)
+
+    await create_user(db_session, "vol8b@example.com", UserRole.volunteer)
+    vol_token = await login(client, "vol8b@example.com")
+    res = await client.post(f"/api/v1/events/{event_id}/register", headers=auth_headers(vol_token))
+    reg_id = res.json()["id"]
+
+    res = await client.post(
+        f"/api/v1/events/{event_id}/applicants/{reg_id}/bonus-points",
+        json={"amount": 150, "reason": "Слишком щедро"},
+        headers=auth_headers(org_token),
+    )
+    assert res.status_code == 422
+
+    res = await client.post(
+        f"/api/v1/events/{event_id}/applicants/{reg_id}/bonus-points",
+        json={"amount": 100, "reason": "Максимум за раз"},
+        headers=auth_headers(org_token),
+    )
+    assert res.status_code == 200, res.text

@@ -206,11 +206,15 @@ function bindApplicantRow(eventId, a) {
     });
   }
   row.querySelector('[data-action="bonus"]').addEventListener("click", async () => {
-    const amount = prompt("Сколько баллов начислить?");
+    const amount = prompt("Сколько баллов начислить? (максимум 100 за раз)");
     if (!amount) return;
     const reason = prompt("За что?", "Отличная работа") || "Бонус от организатора";
-    await api.post(`/events/${eventId}/applicants/${a.id}/bonus-points`, { amount: parseFloat(amount), reason });
-    loadEvent(eventId);
+    try {
+      await api.post(`/events/${eventId}/applicants/${a.id}/bonus-points`, { amount: parseFloat(amount), reason });
+      loadEvent(eventId);
+    } catch (err) {
+      toast(err.message, "error");
+    }
   });
   row.querySelector('[data-action="feature"]').addEventListener("click", async () => {
     await api.post(`/events/${eventId}/applicants/${a.id}/feature`, {

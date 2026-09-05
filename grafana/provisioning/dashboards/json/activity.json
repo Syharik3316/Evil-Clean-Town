@@ -3,7 +3,7 @@
   "uid": "chistybereg-activity",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "5m",
   "time": { "from": "now-90d", "to": "now" },
   "panels": [
@@ -13,6 +13,8 @@
       "title": "Всего пользователей",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM users",
@@ -27,6 +29,8 @@
       "title": "Опубликованных мероприятий",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM events WHERE status = 'published'",
@@ -41,6 +45,8 @@
       "title": "Тикетов на рассмотрении (мероприятия)",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM events WHERE status = 'pending_review'",
@@ -55,6 +61,8 @@
       "title": "Репортов на модерации",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "orange" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM trash_reports WHERE status = 'pending'",
@@ -69,6 +77,8 @@
       "title": "Команд/школ",
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM teams",
@@ -83,6 +93,8 @@
       "title": "Мероприятий всего",
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM events",
@@ -97,6 +109,8 @@
       "title": "Уроков пройдено всего",
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "dark-green" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM user_lesson_progress",
@@ -111,6 +125,8 @@
       "title": "Репортов всего",
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "semi-dark-blue" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM trash_reports",
@@ -125,6 +141,8 @@
       "title": "Репортов принято",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT count(*) FROM trash_reports WHERE status = 'approved'",
@@ -139,6 +157,8 @@
       "title": "Начислено баллов всего",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 4 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "yellow" } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto" },
       "targets": [
         {
           "rawSql": "SELECT coalesce(sum(points_total), 0) FROM users",
@@ -148,11 +168,60 @@
       ]
     },
     {
+      "id": 18,
+      "type": "piechart",
+      "title": "Мероприятия по статусам",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "options": {
+        "reduceOptions": { "values": true, "calcs": [], "fields": "" },
+        "pieType": "donut",
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT status AS \"metric\", count(*) AS \"value\" FROM events GROUP BY status ORDER BY 2 DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "piechart",
+      "title": "Репорты по статусам",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "options": {
+        "reduceOptions": { "values": true, "calcs": [], "fields": "" },
+        "pieType": "donut",
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"] },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT status AS \"metric\", count(*) AS \"value\" FROM trash_reports GROUP BY status ORDER BY 2 DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 5,
       "type": "timeseries",
       "title": "Регистрации пользователей по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 25, "gradientMode": "opacity", "showPoints": "auto", "pointSize": 4 }
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), count(*) AS \"Регистрации\" FROM users WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
@@ -165,8 +234,15 @@
       "id": 6,
       "type": "timeseries",
       "title": "Входы по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 25, "gradientMode": "opacity", "showPoints": "auto", "pointSize": 4 }
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), count(*) AS \"Входы\" FROM login_events WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
@@ -179,8 +255,15 @@
       "id": 7,
       "type": "timeseries",
       "title": "Прохождения курсов по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60, "gradientMode": "hue" }
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(completed_at,'1d'), count(*) AS \"Курсы пройдены\" FROM user_lesson_progress WHERE $__timeFilter(completed_at) GROUP BY 1 ORDER BY 1",
@@ -193,8 +276,15 @@
       "id": 8,
       "type": "timeseries",
       "title": "Подтверждённое участие в мероприятиях (чек-ины) по дням",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60, "gradientMode": "hue" }
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(checkin_at,'1d'), count(*) AS \"Чек-ины\" FROM event_registrations WHERE status = 'checked_in' AND $__timeFilter(checkin_at) GROUP BY 1 ORDER BY 1",
@@ -204,11 +294,49 @@
       ]
     },
     {
+      "id": 20,
+      "type": "gauge",
+      "title": "Доля принятых репортов",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 32 },
+      "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 40 },
+              { "color": "green", "value": 75 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "showThresholdLabels": false, "showThresholdMarkers": true },
+      "targets": [
+        {
+          "rawSql": "SELECT CASE WHEN count(*) = 0 THEN 0 ELSE round(100.0 * count(*) FILTER (WHERE status = 'approved') / count(*), 1) END FROM trash_reports",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 9,
       "type": "timeseries",
       "title": "Начисленные баллы по дням",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 32 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "yellow" },
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 35, "gradientMode": "opacity", "showPoints": "auto", "pointSize": 4 }
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "rawSql": "SELECT $__timeGroupAlias(created_at,'1d'), sum(amount) AS \"Баллы\" FROM points_ledger WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
@@ -221,8 +349,10 @@
       "id": 16,
       "type": "bargauge",
       "title": "Баллы команд/школ по городам",
-      "gridPos": { "h": 8, "w": 10, "x": 0, "y": 32 },
+      "gridPos": { "h": 8, "w": 10, "x": 0, "y": 40 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true },
+      "fieldConfig": { "defaults": { "color": { "mode": "continuous-GrYlRd" } }, "overrides": [] },
       "targets": [
         {
           "rawSql": "SELECT city AS \"metric\", sum(points_total) AS \"value\" FROM teams WHERE city IS NOT NULL GROUP BY city ORDER BY sum(points_total) DESC",
@@ -235,7 +365,7 @@
       "id": 17,
       "type": "table",
       "title": "История мероприятий",
-      "gridPos": { "h": 10, "w": 14, "x": 10, "y": 32 },
+      "gridPos": { "h": 8, "w": 14, "x": 10, "y": 40 },
       "datasource": { "type": "postgres", "uid": "chistybereg-postgres" },
       "targets": [
         {
