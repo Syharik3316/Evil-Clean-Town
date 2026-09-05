@@ -14,3 +14,19 @@ class NotificationOut(BaseModel):
     related_entity_id: int | None
     read_at: datetime | None
     created_at: datetime
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscriptionCreate(BaseModel):
+    """Форма ровно повторяет subscription.toJSON() из Push API браузера."""
+
+    endpoint: str
+    keys: PushSubscriptionKeys
+
+
+class PushUnsubscribeRequest(BaseModel):
+    endpoint: str

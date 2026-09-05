@@ -4,6 +4,55 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+/* ------------------------------------------------ Web Push уведомления --- */
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
+  return output;
+}
+
+async function getPushAvailability() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") {
+    return { supported: false };
+  }
+  if (Notification.permission === "denied") return { supported: true, blocked: true };
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return { supported: true, subscribed: true };
+  } catch (e) {
+    return { supported: false };
+  }
+
+  try {
+    const { public_key } = await api.get("/notifications/push/public-key");
+    if (!public_key) return { supported: true, configured: false };
+    return { supported: true, configured: true, publicKey: public_key };
+  } catch (e) {
+    return { supported: false };
+  }
+}
+
+async function enablePushNotifications(publicKey) {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") throw new Error("Уведомления не разрешены в браузере");
+
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+  }
+  await api.post("/notifications/push/subscribe", sub.toJSON());
+}
+
 const NAV_LINKS_BY_ROLE = {
   guest: [
     ["/index", "Главная"],
@@ -68,6 +117,9 @@ async function renderNav(activePage) {
           <div class="dropdown-panel-header">
             <span>Уведомления</span>
             <button class="btn btn-secondary btn-sm" id="nav-mark-all-read" style="padding:3px 9px;font-size:11px">Прочитать все</button>
+          </div>
+          <div id="nav-push-row" hidden style="padding:8px 14px;border-bottom:1px solid var(--color-divider)">
+            <button class="btn btn-secondary btn-sm" id="nav-enable-push" style="width:100%">Включить уведомления на компьютере</button>
           </div>
           <div class="dropdown-panel-body" id="nav-notif-body">${skeletonLines(3)}</div>
           <div class="dropdown-panel-footer"><a href="/notifications">Показать все →</a></div>
@@ -161,6 +213,32 @@ async function initNotificationBell() {
     }
   } catch (e) {
     /* тихо игнорируем — колокольчик просто без счётчика */
+  }
+
+  const pushRow = document.getElementById("nav-push-row");
+  const pushBtn = document.getElementById("nav-enable-push");
+  if (pushRow && pushBtn) {
+    try {
+      const availability = await getPushAvailability();
+      if (availability.supported && availability.configured && !availability.subscribed) {
+        pushRow.hidden = false;
+        pushBtn.addEventListener("click", async () => {
+          pushBtn.disabled = true;
+          pushBtn.textContent = "Включаем…";
+          try {
+            await enablePushNotifications(availability.publicKey);
+            pushRow.hidden = true;
+            toast("Уведомления включены", "success");
+          } catch (err) {
+            pushBtn.disabled = false;
+            pushBtn.textContent = "Включить уведомления на компьютере";
+            toast(err.message, "error");
+          }
+        });
+      }
+    } catch (e) {
+      /* тихо игнорируем — просто не показываем переключатель */
+    }
   }
 }
 

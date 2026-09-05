@@ -1,6 +1,11 @@
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
+from app.services.push import send_web_push
+
+logger = logging.getLogger(__name__)
 
 
 async def notify(
@@ -22,3 +27,8 @@ async def notify(
             related_entity_id=related_entity_id,
         )
     )
+    # лучшая попытка: пуш на устройства пользователя не должен ронять основной запрос
+    try:
+        await send_web_push(db, user_id, title, body, related_entity_type, related_entity_id)
+    except Exception:
+        logger.exception("Web push: не удалось отправить уведомление user_id=%s", user_id)

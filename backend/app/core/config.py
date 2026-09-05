@@ -48,6 +48,15 @@ class Settings(BaseSettings):
 
     min_age_years: int = 14
 
+    # Web Push (десктопные/браузерные уведомления вне вкладки — Notification API + Service
+    # Worker). Публичный ключ отдаётся фронтенду для подписки (frontend/js/push.js),
+    # приватным подписываются сообщения на push-сервис браузера (pywebpush). Если пусто —
+    # push просто не отправляется, в БД по-прежнему пишется обычное уведомление.
+    # Сгенерировать пару: python scripts/generate_vapid_keys.py
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@syharik.ru"
+
     # Read-only Postgres-роль для Grafana (см. docker-compose.yml, grafana/provisioning).
     grafana_db_password: str = "change-me"
 

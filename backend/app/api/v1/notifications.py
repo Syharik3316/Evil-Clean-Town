@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.models.mixins import utcnow
-from app.models.notification import Notification
+from app.models.notification import Notification, PushSubscription
 from app.models.user import User
-from app.schemas.notification import NotificationOut
+from app.schemas.notification import NotificationOut, PushSubscriptionCreate, PushUnsubscribeRequest
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -62,3 +63,47 @@ async def mark_all_read(user: User = Depends(get_current_user), db: AsyncSession
         count += 1
     await db.commit()
     return {"marked": count}
+
+
+@router.get("/push/public-key")
+async def push_public_key():
+    """Публичный VAPID-ключ для frontend/js/push.js (pushManager.subscribe).
+
+    Пустая строка означает, что Web Push не настроен на сервере (см. .env) —
+    фронтенд в этом случае просто не показывает переключатель подписки."""
+    return {"public_key": settings.vapid_public_key}
+
+
+@router.post("/push/subscribe", status_code=status.HTTP_204_NO_CONTENT)
+async def push_subscribe(
+    payload: PushSubscriptionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    existing = await db.execute(select(PushSubscription).where(PushSubscription.endpoint == payload.endpoint))
+    subscription = existing.scalar_one_or_none()
+    if subscription is None:
+        db.add(
+            PushSubscription(
+                user_id=user.id,
+                endpoint=payload.endpoint,
+                p256dh=payload.keys.p256dh,
+                auth=payload.keys.auth,
+            )
+        )
+    else:
+        # то же устройство могло переподписаться (новый ключ) или перейти к другому пользователю
+        subscription.user_id = user.id
+        subscription.p256dh = payload.keys.p256dh
+        subscription.auth = payload.keys.auth
+    await db.commit()
+
+
+@router.post("/push/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
+async def push_unsubscribe(
+    payload: PushUnsubscribeRequest, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    await db.execute(
+        delete(PushSubscription).where(
+            PushSubscription.endpoint == payload.endpoint, PushSubscription.user_id == user.id
+        )
+    )
+    await db.commit()
