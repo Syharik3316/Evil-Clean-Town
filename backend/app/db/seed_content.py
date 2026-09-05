@@ -1,20 +1,23 @@
+"""Идемпотентный сид справочного контента платформы: участки побережья со снимками
+до/после, обучающие курсы (включая базовый курс волонтёра) и ачивки.
+
+Это не демо-данные и не тестовые аккаунты — это реальный контент, без которого разделы
+«Карта», «Уроки» и ачивки будут пустыми, поэтому сидер запускается всегда при старте
+(entrypoint.sh), а не по флагу. Каждый элемент добавляется независимо и только если его
+ещё нет (по name/slug/code) — безопасно перезапускать на уже заполненной БД.
+"""
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
 
-from app.core.security import hash_password
 from app.db.seed_images import generate_pair
-from app.db.seed_institutions import seed_institutions
-from app.db.session import AsyncSessionLocal, engine
-from app.models import Base  # imports all model modules, registering them on Base.metadata
-from app.models.event import Event, EventType
+from app.db.session import AsyncSessionLocal
 from app.models.gamification import Achievement, AchievementCriteria
 from app.models.lesson import CardContentType, Lesson, LessonCard
 from app.models.site import CoastlineSite, LayerType, SatelliteLayer
-from app.models.user import AgeVerificationMethod, Team, TeamType, User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -90,114 +93,90 @@ ACHIEVEMENTS = [
 ]
 
 
-async def seed() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+async def _seed_sites(db) -> int:
+    existing_names = set((await db.execute(select(CoastlineSite.name))).scalars().all())
+    image_dir = Path(__file__).parent.parent / "static" / "satellite"
+    added = 0
+    for s in SITES:
+        if s["name"] in existing_names:
+            continue
+        site = CoastlineSite(
+            name=s["name"], region=s["region"], lat=s["lat"], lon=s["lon"],
+            description="Демонстрационный участок побережья для показа слайдера «до/после».",
+        )
+        db.add(site)
+        await db.flush()
 
+        before_name, after_name = generate_pair(image_dir, s["slug"])
+        d = 0.006
+        bounds = [[s["lat"] - d, s["lon"] - d], [s["lat"] + d, s["lon"] + d]]
+        db.add_all([
+            SatelliteLayer(
+                site_id=site.id, captured_at=date.today() - timedelta(days=60), layer_type=LayerType.rgb,
+                label="До уборки", image_url=f"/static/satellite/{before_name}", bounds=bounds, order_index=0,
+            ),
+            SatelliteLayer(
+                site_id=site.id, captured_at=date.today() - timedelta(days=3), layer_type=LayerType.rgb,
+                label="После уборки", image_url=f"/static/satellite/{after_name}", bounds=bounds, order_index=1,
+            ),
+        ])
+        added += 1
+    return added
+
+
+async def _seed_lesson(db, lesson_data: dict, order_index: int, *, is_base_course: bool = False, points_reward: int) -> bool:
+    existing = await db.execute(select(Lesson).where(Lesson.slug == lesson_data["slug"]))
+    if existing.scalar_one_or_none() is not None:
+        return False
+
+    lesson = Lesson(
+        title=lesson_data["title"], slug=lesson_data["slug"], summary=lesson_data["summary"],
+        order_index=order_index, points_reward=points_reward, is_base_course=is_base_course,
+    )
+    db.add(lesson)
+    await db.flush()
+    for card_idx, card in enumerate(lesson_data["cards"]):
+        title, body, *quiz = card
+        quiz_data = quiz[0] if quiz else None
+        db.add(LessonCard(
+            lesson_id=lesson.id, order_index=card_idx,
+            content_type=CardContentType.quiz if quiz_data else CardContentType.text,
+            title=title, body=body or "", quiz_data=quiz_data,
+        ))
+    return True
+
+
+async def _seed_achievements(db) -> int:
+    existing_codes = set((await db.execute(select(Achievement.code))).scalars().all())
+    added = 0
+    for a in ACHIEVEMENTS:
+        if a["code"] in existing_codes:
+            continue
+        db.add(Achievement(**a))
+        added += 1
+    return added
+
+
+async def seed_content() -> None:
     async with AsyncSessionLocal() as db:
-        institutions_added = await seed_institutions(db)
-        if institutions_added:
-            logger.info("Institutions seeded: %d new", institutions_added)
+        sites_added = await _seed_sites(db)
 
-        existing = await db.execute(select(User).limit(1))
-        if existing.scalar_one_or_none() is not None:
-            logger.info("Seed skipped: demo users already present")
-            return
-
-        team = Team(name="Эко-клуб «Чистый берег»", type=TeamType.club, city="Анапа")
-        db.add(team)
-        await db.flush()
-
-        admin = User(
-            username="admin", email="admin@chistybereg.ru", password_hash=hash_password("admin12345"),
-            display_name="Администратор фонда", role=UserRole.admin, email_verified=True,
-        )
-        organizer = User(
-            username="organizer", email="organizer@chistybereg.ru", password_hash=hash_password("organizer12345"),
-            display_name="Организатор эко-клуба", role=UserRole.organizer, team_id=team.id, email_verified=True,
-        )
-        volunteer = User(
-            username="volunteer", email="volunteer@chistybereg.ru", password_hash=hash_password("volunteer12345"),
-            display_name="Волонтёр Аня", role=UserRole.volunteer, team_id=team.id, email_verified=True,
-            age_verified=True, age_verification_method=AgeVerificationMethod.manual,
-        )
-        db.add_all([admin, organizer, volunteer])
-        await db.flush()
-
-        image_dir = Path(__file__).parent.parent / "static" / "satellite"
-        site_objs = []
-        for s in SITES:
-            site = CoastlineSite(name=s["name"], region=s["region"], lat=s["lat"], lon=s["lon"],
-                                  description="Демонстрационный участок побережья для показа слайдера «до/после».")
-            db.add(site)
-            await db.flush()
-            site_objs.append(site)
-
-            before_name, after_name = generate_pair(image_dir, s["slug"])
-            d = 0.006
-            bounds = [[s["lat"] - d, s["lon"] - d], [s["lat"] + d, s["lon"] + d]]
-            db.add_all([
-                SatelliteLayer(
-                    site_id=site.id, captured_at=date.today() - timedelta(days=60), layer_type=LayerType.rgb,
-                    label="До уборки", image_url=f"/static/satellite/{before_name}", bounds=bounds, order_index=0,
-                ),
-                SatelliteLayer(
-                    site_id=site.id, captured_at=date.today() - timedelta(days=3), layer_type=LayerType.rgb,
-                    label="После уборки", image_url=f"/static/satellite/{after_name}", bounds=bounds, order_index=1,
-                ),
-            ])
-
+        lessons_added = 0
         for idx, lesson_data in enumerate(LESSONS):
-            lesson = Lesson(
-                title=lesson_data["title"], slug=lesson_data["slug"], summary=lesson_data["summary"],
-                order_index=idx, points_reward=10,
-            )
-            db.add(lesson)
-            await db.flush()
-            for card_idx, card in enumerate(lesson_data["cards"]):
-                title, body, *quiz = card
-                quiz_data = quiz[0] if quiz else None
-                db.add(LessonCard(
-                    lesson_id=lesson.id, order_index=card_idx,
-                    content_type=CardContentType.quiz if quiz_data else CardContentType.text,
-                    title=title, body=body or "", quiz_data=quiz_data,
-                ))
+            if await _seed_lesson(db, lesson_data, order_index=idx, points_reward=10):
+                lessons_added += 1
+        if await _seed_lesson(db, BASE_COURSE, order_index=len(LESSONS), is_base_course=True, points_reward=15):
+            lessons_added += 1
 
-        base_lesson = Lesson(
-            title=BASE_COURSE["title"], slug=BASE_COURSE["slug"], summary=BASE_COURSE["summary"],
-            order_index=len(LESSONS), points_reward=15, is_base_course=True,
-        )
-        db.add(base_lesson)
-        await db.flush()
-        for card_idx, card in enumerate(BASE_COURSE["cards"]):
-            title, body, *quiz = card
-            quiz_data = quiz[0] if quiz else None
-            db.add(LessonCard(
-                lesson_id=base_lesson.id, order_index=card_idx,
-                content_type=CardContentType.quiz if quiz_data else CardContentType.text,
-                title=title, body=body or "", quiz_data=quiz_data,
-            ))
-
-        for a in ACHIEVEMENTS:
-            db.add(Achievement(**a))
-
-        db.add(Event(
-            title="Уборка пляжа в Анапе", description="Собираемся у входа на пляж Лазурный, приносите перчатки и хорошее настроение!",
-            event_type=EventType.cleanup, site_id=site_objs[0].id, organizer_id=organizer.id,
-            starts_at=datetime.now(timezone.utc) + timedelta(days=7), address="Анапа, пляж Лазурный",
-            lat=SITES[0]["lat"], lon=SITES[0]["lon"], capacity=50, points_reward=25,
-        ))
-        db.add(Event(
-            title="Онлайн-вебинар: читаем спутниковые снимки", description="Эксперт «СР Дата» расскажет, как устроен спутниковый мониторинг побережья.",
-            event_type=EventType.webinar, site_id=None, organizer_id=admin.id,
-            starts_at=datetime.now(timezone.utc) + timedelta(days=3), address="Онлайн",
-            lat=55.751244, lon=37.618423, capacity=None, points_reward=10,
-        ))
+        achievements_added = await _seed_achievements(db)
 
         await db.commit()
-        logger.info("Seed complete")
+        logger.info(
+            "Content seed: %d sites, %d lessons, %d achievements added",
+            sites_added, lessons_added, achievements_added,
+        )
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(seed())
+    asyncio.run(seed_content())

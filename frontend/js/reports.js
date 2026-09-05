@@ -15,8 +15,10 @@ async function initReportsPage() {
     if (currentReportRejectHandler) await currentReportRejectHandler(reason);
   });
 
-  if (user && (user.role === "organizer" || user.role === "admin")) {
+  if (user && user.role === "admin") {
     renderModerationView(root);
+  } else if (user && user.role === "organizer") {
+    renderOrganizerReadOnlyView(root);
   } else {
     renderSubmissionView(root, user);
   }
@@ -149,7 +151,39 @@ async function loadMyReports() {
   }
 }
 
-/* ---------- Организатор/админ: модерация репортов ---------- */
+/* ---------- Организатор: только просмотр (модерация — только у админа) ---------- */
+
+function renderOrganizerReadOnlyView(root) {
+  root.innerHTML = `
+    <h1>Репорты о мусоре</h1>
+    <p class="lead">Модерация репортов — задача администрации. Здесь можно только просматривать очередь.</p>
+    <div id="reports-readonly-table">${skeletonCards(3)}</div>
+  `;
+  loadOrganizerReadOnlyTable();
+}
+
+async function loadOrganizerReadOnlyTable() {
+  const el = document.getElementById("reports-readonly-table");
+  try {
+    const reports = await api.get("/reports?status_filter=pending");
+    el.innerHTML = reports.length
+      ? `<div class="grid">${reports
+          .map(
+            (r) => `
+        <div class="card">
+          <img src="${r.photo_url}" style="width:100%;border-radius:8px;margin-bottom:8px" alt="Фото репорта" />
+          <p>${escapeHtml(r.description || "Без описания")}</p>
+          <p class="muted">${formatDate(r.created_at)} · ${escapeHtml(r.region || "регион не указан")}</p>
+        </div>`
+          )
+          .join("")}</div>`
+      : '<p class="muted">Нет репортов на модерации.</p>';
+  } catch (e) {
+    el.innerHTML = `<div class="alert error">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/* ---------- Админ: модерация репортов ---------- */
 
 function renderModerationView(root) {
   root.innerHTML = `
@@ -190,6 +224,10 @@ function moderationCard(r) {
       <img src="${r.photo_url}" style="width:100%;border-radius:8px;margin-bottom:8px" alt="Фото репорта" />
       <p>${escapeHtml(r.description || "Без описания")}</p>
       <p class="muted">${formatDate(r.created_at)} · ${escapeHtml(r.region || "регион не указан")} · ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</p>
+      <div class="field" style="margin-bottom:8px">
+        <label for="report-points-${r.id}">Баллы за репорт</label>
+        <input type="number" id="report-points-${r.id}" min="0" value="${r.points_reward}" style="max-width:120px" />
+      </div>
       <div style="display:flex; gap:8px">
         <button class="btn" data-approve>Принять</button>
         <button class="btn danger" data-reject>Отклонить</button>
@@ -200,9 +238,15 @@ function moderationCard(r) {
 function bindModerationCard(r) {
   const card = document.getElementById(`report-mod-${r.id}`);
   card.querySelector("[data-approve]").addEventListener("click", async () => {
-    await api.post(`/reports/${r.id}/moderate`, { approve: true });
-    toast("Репорт принят", "success");
-    loadModerationTable();
+    const pointsInput = document.getElementById(`report-points-${r.id}`);
+    const points = pointsInput.value === "" ? null : parseInt(pointsInput.value, 10);
+    try {
+      await api.post(`/reports/${r.id}/moderate`, { approve: true, points });
+      toast("Репорт принят", "success");
+      loadModerationTable();
+    } catch (err) {
+      toast(err.message, "error");
+    }
   });
   card.querySelector("[data-reject]").addEventListener("click", () => {
     currentReportRejectHandler = async (reason) => {

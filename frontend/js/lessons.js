@@ -15,12 +15,15 @@ const LESSON_STATUS_LABELS = {
 async function renderLessonList() {
   const root = document.getElementById("lessons-root");
   const user = isLoggedIn() ? await currentUser() : null;
-  const canAuthor = user && (user.role === "organizer" || user.role === "admin");
+  const orgApproved = !user || !user.organization || user.organization.status === "approved";
+  const canAuthor = user && (user.role === "admin" || (user.role === "organizer" && orgApproved));
+  const orgPending = user && user.role === "organizer" && !orgApproved;
 
   root.innerHTML = `
     <h1>Обучающие модули</h1>
     <p class="lead">Короткие уроки о том, как устроен экомониторинг побережья, и базовый курс для участия в уборках.</p>
     <div class="grid" id="lesson-grid">${skeletonCards(3)}</div>
+    ${orgPending ? '<div class="alert info">Создание курсов станет доступно после подтверждения вашей организации администрацией.</div>' : ""}
     ${canAuthor ? '<h2>Создать курс</h2><div class="card" id="create-course-card"></div><h2>Мои курсы</h2><div id="my-courses">' + skeletonLines(2) + '</div>' : ""}
   `;
 

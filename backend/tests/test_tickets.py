@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.models.site import CoastlineSite
-from app.models.user import UserRole
+from app.models.user import Organization, OrganizationLegalType, OrganizationStatus, UserRole
 from tests.helpers import auth_headers, create_user, login
 
 pytestmark = pytest.mark.asyncio
@@ -131,3 +131,83 @@ async def test_admin_full_event_history(client, db_session):
     assert res.status_code == 200
     assert len(res.json()) == 1
     assert res.json()[0]["status"] == "pending_review"
+
+
+async def _org_organizer(db_session, email: str, status: OrganizationStatus = OrganizationStatus.pending):
+    org = Organization(
+        name="Тикет-организация", inn="7707083893", legal_type=OrganizationLegalType.legal_entity,
+        contact_email=email, status=status,
+    )
+    db_session.add(org)
+    await db_session.flush()
+    user = await create_user(db_session, email, UserRole.organizer)
+    user.organization_id = org.id
+    await db_session.commit()
+    await db_session.refresh(org)
+    return user, org
+
+
+async def test_unapproved_organization_cannot_create_event(client, db_session):
+    await _org_organizer(db_session, "pendingorg@example.com")
+    org_token = await login(client, "pendingorg@example.com")
+    site_id = await _create_site(db_session)
+
+    res = await client.post(
+        "/api/v1/events",
+        json={
+            "title": "Мероприятие непроверенной организации", "description": "x", "event_type": "cleanup",
+            "site_id": site_id, "starts_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+            "lat": EVENT_LAT, "lon": EVENT_LON,
+        },
+        headers=auth_headers(org_token),
+    )
+    assert res.status_code == 403
+
+
+async def test_admin_approves_organization_and_unblocks_event_creation(client, db_session):
+    _, org = await _org_organizer(db_session, "approveorg@example.com")
+    org_token = await login(client, "approveorg@example.com")
+    await create_user(db_session, "adminF@example.com", UserRole.admin)
+    admin_token = await login(client, "adminF@example.com")
+    site_id = await _create_site(db_session)
+
+    res = await client.get("/api/v1/admin/tickets/organizations", headers=auth_headers(admin_token))
+    assert res.status_code == 200
+    assert org.id in [o["id"] for o in res.json()]
+
+    res = await client.post(
+        f"/api/v1/admin/tickets/organizations/{org.id}/approve", headers=auth_headers(admin_token)
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "approved"
+
+    res = await client.get("/api/v1/notifications", headers=auth_headers(org_token))
+    assert "organization_approved" in [n["type"] for n in res.json()]
+
+    event_id = await _propose_event(client, org_token, site_id)
+    assert event_id is not None
+
+
+async def test_admin_rejects_organization_with_reason(client, db_session):
+    _, org = await _org_organizer(db_session, "rejectorg@example.com")
+    await create_user(db_session, "adminG@example.com", UserRole.admin)
+    admin_token = await login(client, "adminG@example.com")
+    org_token = await login(client, "rejectorg@example.com")
+
+    res = await client.post(
+        f"/api/v1/admin/tickets/organizations/{org.id}/reject", json={}, headers=auth_headers(admin_token)
+    )
+    assert res.status_code == 422
+
+    res = await client.post(
+        f"/api/v1/admin/tickets/organizations/{org.id}/reject",
+        json={"reason": "ИНН не подтверждён"},
+        headers=auth_headers(admin_token),
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "rejected"
+
+    res = await client.get("/api/v1/notifications", headers=auth_headers(org_token))
+    rejected = [n for n in res.json() if n["type"] == "organization_rejected"]
+    assert len(rejected) == 1
+    assert rejected[0]["body"] == "ИНН не подтверждён"

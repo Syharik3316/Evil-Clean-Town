@@ -3,19 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Тикеты — Чистый берег</title>
+  <title>Тикеты — GoodWill</title>
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/favicon.ico" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <nav class="nav"><div id="app-nav"></div></nav>
   <div class="container">
     <h1>Тикеты</h1>
-    <p class="lead">Модерация предложенных мероприятий и курсов. Репорты о мусоре модерируются на странице «Репорты».</p>
+    <p class="lead">Модерация предложенных мероприятий, курсов и организаций. Репорты о мусоре модерируются на странице «Репорты».</p>
 
     <div style="display:flex; gap:8px; margin-bottom:14px">
       <button class="btn" data-tab="events">Мероприятия</button>
       <button class="btn secondary" data-tab="courses">Курсы</button>
+      <button class="btn secondary" data-tab="organizations">Организации</button>
     </div>
 
     <div id="ticket-root">Загрузка…</div>

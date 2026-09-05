@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user, get_db, require_organizer
+from app.core.deps import get_current_user, get_db, require_admin
 from app.models.mixins import utcnow
 from app.models.report import ReportStatus, TrashReport
 from app.models.user import User
@@ -98,7 +98,7 @@ async def get_report(report_id: int, db: AsyncSession = Depends(get_db)):
 async def moderate_report(
     report_id: int,
     payload: ModerationRequest,
-    moderator: User = Depends(require_organizer),
+    moderator: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     report = await db.get(TrashReport, report_id)
@@ -113,9 +113,12 @@ async def moderate_report(
 
     author = await db.get(User, report.user_id)
     if payload.approve:
+        # баллы — на усмотрение админа (payload.points), по умолчанию берём points_reward репорта
+        points_to_award = payload.points if payload.points is not None else report.points_reward
+        report.points_reward = points_to_award
         if author is not None:
             await award_points(
-                db, author, report.points_reward, reason="Репорт о мусоре принят",
+                db, author, points_to_award, reason="Репорт о мусоре принят",
                 related_entity_type="report", related_entity_id=report.id,
             )
             await check_achievements(db, author)

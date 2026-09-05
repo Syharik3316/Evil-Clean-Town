@@ -38,6 +38,33 @@ async def test_login_before_verification_rejected(client):
     )
     res = await client.post("/api/v1/auth/login", json={"username": "unverified", "password": "password123"})
     assert res.status_code == 403
+    # email передаётся в ответе, чтобы фронтенд мог сразу показать форму ввода кода
+    assert res.json()["email"] == "unverified@example.com"
+
+
+async def test_resend_code_allows_login_after_lost_code(client):
+    await client.post(
+        "/api/v1/auth/register",
+        json={"username": "resendme", "email": "resendme@example.com", "password": "password123", "display_name": "Р"},
+    )
+    old_code = sent_verification_codes["resendme@example.com"]
+
+    res = await client.post("/api/v1/auth/resend-code", json={"email": "resendme@example.com"})
+    assert res.status_code == 200
+    new_code = sent_verification_codes["resendme@example.com"]
+
+    res = await client.post("/api/v1/auth/verify-email", json={"email": "resendme@example.com", "code": new_code})
+    assert res.status_code == 200
+
+    # резервный код от старого письма больше не должен быть единственным путём — но и
+    # старый факт отправки не ломает верификацию новым кодом
+    assert new_code is not None and old_code is not None
+
+
+async def test_resend_code_unknown_email_does_not_leak(client):
+    res = await client.post("/api/v1/auth/resend-code", json={"email": "nosuchuser@example.com"})
+    assert res.status_code == 200
+    assert res.json()["email"] == "nosuchuser@example.com"
 
 
 async def test_duplicate_registration_rejected(client):
@@ -132,3 +159,66 @@ async def test_gosuslugi_stub_not_configured(client):
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     res = await client.post("/api/v1/users/me/age-verification/gosuslugi/start", headers=headers)
     assert res.status_code == 501
+
+
+async def test_change_username_requires_current_password(client):
+    tokens = await register_and_verify(client, username="userold", email="userold@example.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    res = await client.patch(
+        "/api/v1/users/me/username",
+        json={"current_password": "wrong", "new_username": "usernew"},
+        headers=headers,
+    )
+    assert res.status_code == 401
+
+    res = await client.patch(
+        "/api/v1/users/me/username",
+        json={"current_password": "password123", "new_username": "usernew"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["username"] == "usernew"
+
+    res = await client.post("/api/v1/auth/login", json={"username": "usernew", "password": "password123"})
+    assert res.status_code == 200
+
+
+async def test_change_password(client):
+    tokens = await register_and_verify(client, username="pwuser", email="pwuser@example.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    res = await client.patch(
+        "/api/v1/users/me/password",
+        json={"current_password": "password123", "new_password": "newpassword456"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+
+    res = await client.post("/api/v1/auth/login", json={"username": "pwuser", "password": "password123"})
+    assert res.status_code == 401
+    res = await client.post("/api/v1/auth/login", json={"username": "pwuser", "password": "newpassword456"})
+    assert res.status_code == 200
+
+
+async def test_change_email_requires_confirmation_code(client):
+    tokens = await register_and_verify(client, username="emailuser", email="emailold@example.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    res = await client.post(
+        "/api/v1/users/me/email/change",
+        json={"current_password": "password123", "new_email": "emailnew@example.com"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["pending_email"] == "emailnew@example.com"
+    assert res.json()["email"] == "emailold@example.com"
+
+    code = sent_verification_codes["emailnew@example.com"]
+    res = await client.post("/api/v1/users/me/email/confirm", json={"code": "000001" if code != "000001" else "000002"}, headers=headers)
+    assert res.status_code == 400
+
+    res = await client.post("/api/v1/users/me/email/confirm", json={"code": code}, headers=headers)
+    assert res.status_code == 200
+    assert res.json()["email"] == "emailnew@example.com"
+    assert res.json()["pending_email"] is None

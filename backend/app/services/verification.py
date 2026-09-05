@@ -18,7 +18,7 @@ def _hash_code(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
 
-async def issue_email_verification_code(db: AsyncSession, user: User) -> None:
+async def issue_email_verification_code(db: AsyncSession, user: User, target_email: str | None = None) -> None:
     code = f"{secrets.randbelow(1_000_000):06d}"
     db.add(
         EmailVerificationCode(
@@ -28,7 +28,7 @@ async def issue_email_verification_code(db: AsyncSession, user: User) -> None:
         )
     )
     await db.flush()
-    await send_verification_code(user.email, code)
+    await send_verification_code(target_email or user.email, code)
 
 
 async def consume_email_verification_code(db: AsyncSession, user: User, code: str) -> bool:

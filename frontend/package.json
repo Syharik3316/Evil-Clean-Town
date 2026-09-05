@@ -1,8 +1,8 @@
 {
-  "name": "chistybereg-frontend",
+  "name": "goodwill-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Простой статический фронтенд «Чистый берег» (HTML/CSS/JS) поверх FastAPI API.",
+  "description": "Простой статический фронтенд «GoodWill» (HTML/CSS/JS) поверх FastAPI API.",
   "scripts": {
     "dev": "serve -l 5173 ."
   },

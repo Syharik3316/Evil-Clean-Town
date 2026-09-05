@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.report import ReportStatus
 
@@ -18,12 +18,16 @@ class TrashReportOut(BaseModel):
     lat: float
     lon: float
     status: ReportStatus
+    points_reward: int
     created_at: datetime
 
 
 class ModerationRequest(BaseModel):
     approve: bool
     comment: str | None = None
+    # баллы за принятый репорт — на усмотрение админа при одобрении; если не указано,
+    # используется points_reward, заданный при создании репорта (значение по умолчанию)
+    points: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def require_comment_on_reject(self) -> "ModerationRequest":
